@@ -32,6 +32,16 @@ public:
         char checksumDigit = '0' + digitsSum;
         return checksumDigit;
     }
+	
+	void loadTemperaturesToArray(int* tab)
+	{
+		tab[0] = Ta.getInteger();
+		tab[1] = Tb.getInteger();
+		tab[2] = Tc.getInteger();
+		tab[3] = Td.getInteger();
+		tab[4] = Te.getInteger();
+		tab[5] = Tf.getInteger();
+	}
 
     sFloat Ia, Ib, Ta, Tb, Tc, Td, Te, Tf;
 

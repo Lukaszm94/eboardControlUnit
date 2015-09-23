@@ -1,6 +1,7 @@
 #ifndef CONTROLUNIT_H
 #define CONTROLUNIT_H
 
+#include "KS0108.h"
 #include "../common/timer0.h"
 #include "../common/packet.h"
 #include "../common/debug.h"
@@ -17,9 +18,17 @@
 #define THERMOMETER_MOSFET_ADC_CHANNEL 0
 #define THERMOMETER_SAMPLES_COUNT 5
 
-#define BATTERY_VOLTAGE_ADC_CHANNEL 1
-#define BATTERY_VOLTAGE_COEFFICIENT ((10 + 120) / 10) // R1=120k, R2=10k
-#define BATTERY_VOLTAGE_SAMPLES_COUNT 5
+#define THERMOMETER_M1_INDEX 0
+#define THERMOMETER_M2_INDEX 1
+#define THERMOMETER_D1_INDEX 2
+#define THERMOMETER_D2_INDEX 3
+#define THERMOMETER_I1_INDEX 4
+#define THERMOMETER_I2_INDEX 5
+#define THERMOMETER_MOSFET_INDEX 6
+
+#define MOTORS_BATTERY_VOLTAGE_ADC_CHANNEL 1
+#define MOTORS_BATTERY_VOLTAGE_COEFFICIENT ((10 + 120) / 10) // R1=120k, R2=10k
+#define MOTORS_BATTERY_VOLTAGE_SAMPLES_COUNT 5
 
 class ControlUnit
 {
@@ -31,7 +40,7 @@ public:
 		lcdUpdateTimer = 0;
 		latestPacket = NULL;
 		temperaturesOk = true;
-		analyzeNewPacket = false;
+		newPacketReceived = false;
 		highestTemperature = mosfetTemperature = 20;
 		highestTemperatureIndex = 0;
 	}
@@ -39,7 +48,7 @@ public:
 	void init()
 	{
 		ADConverter::init();
-		lcd_init();
+		GLCD_Initalize();
 	}
 
 	void update()
@@ -61,18 +70,28 @@ public:
 	void onNewPacketReceived(Packet *pack)
 	{
 		latestPacket = pack;
-		analyzeNewPacket = true;
+		newPacketReceived = true;
 	}
 
 
 private:
+	void updateBoardState()
+	{
+		if(newPacketReceived) {
+			extractDataFromPacket();
+			updateMosfetTemperature();
+			//TODO
+		}
+	
+	}
+
 	void lcdUpdate()
 	{
 		if(latestPacket == NULL) {
 			return;
 		}
-		if(analyzeNewPacket) {
-			analyzeNewPacket = false;
+		if(newPacketReceived) {
+			newPacketReceived = false;
 			analyzePacket();
 		}
 		mosfetTemperature = readMosfetTemperature();
@@ -130,9 +149,10 @@ private:
 		LCD_char('C');
 	}
 	
-	void analyzePacket()
+	void extractDataFromPacket()
 	{
-		int temperatures[THERMOMETERS_COUNT] = {latestPacket->Ta.getInteger(), latestPacket->Tb.getInteger(), latestPacket->Tc.getInteger(), latestPacket->Td.getInteger(),latestPacket->Te.getInteger(), latestPacket->Tf.getInteger(), mosfetTemperature };
+		latestPacket->loadTemperaturesToArray(temperatures);
+		
 		highestTemperatureIndex = findMaxIntIndex(temperatures, THERMOMETERS_COUNT);
 		highestTemperature = temperatures[highestTemperatureIndex];
 		if(highestTemperature >= TEMPERATURE_WARNING_THRESHOLD) {
@@ -140,6 +160,11 @@ private:
 		} else {
 			temperaturesOk = true;
 		}
+	}
+	
+	void updateMosfetTemperature()
+	{
+		temperatures[THERMOMETER_MOSFET_INDEX] = readMosfetTemperature();
 	}
 	
 	int findMaxIntIndex(int *tab, int size) //returns INDEX of biggest int in given array
@@ -165,9 +190,14 @@ private:
 	
 	float getBatteryVoltage()
 	{
-		float batVADC = ADConverter::getAverageVoltage(BATTERY_VOLTAGE_ADC_CHANNEL , BATTERY_VOLTAGE_SAMPLES_COUNT);
-		return (batVADC*BATTERY_VOLTAGE_COEFFICIENT);
+		float batVADC = ADConverter::getAverageVoltage(MOTORS_BATTERY_VOLTAGE_ADC_CHANNEL , MOTORS_BATTERY_VOLTAGE_SAMPLES_COUNT);
+		return (batVADC*MOTORS_BATTERY_VOLTAGE_COEFFICIENT);
 		
+	}
+	
+	float getTotalMotorsCurrent()
+	{
+		return (m1current + m2current);
 	}
 	
 	void lcdPrintFloat(float number)
@@ -181,14 +211,14 @@ private:
 	float batteryLoad; //in mAh
 	unsigned long lcdUpdateTimer;
 	unsigned long batteryLoadUpdateTimer;
-	bool analyzeNewPacket;
+	bool newPacketReceived;
 	Packet *latestPacket;
 	
 	Thermometer mosfetThermometer;
 	
+	float m1current, m2current;
 	
-	int mosfetTemperature;
-	int highestTemperature;
+	int temperatures[THERMOMETERS_COUNT];
 	int highestTemperatureIndex;
 	bool temperaturesOk;
 };

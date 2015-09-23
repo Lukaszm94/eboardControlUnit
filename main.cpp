@@ -1,6 +1,5 @@
 #include <avr/io.h>
 #include <util/delay.h>
-#include "KS0108.h"
 
 /*
  * TODO:
@@ -9,10 +8,13 @@
  *
  */
 
+ControlUnit CU;
 
 int main(void)
 {
-	GLCD_Initalize();
+
+	CU.init();
+	
 	while(1)
 	{
 		if(interruptFlag) {
