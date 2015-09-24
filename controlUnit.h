@@ -12,12 +12,17 @@
 #define LCD_UPDATE_PERIOD_MS 500
 #define MILIAMPEROSECONDS_TO_MILIAMPEROHOURS 1.0/(60*60)
 
+#define CURRENT_WARNING_THRESHOLD 30
+
 #define TEMPERATURE_WARNING_THRESHOLD 45
+#define TEMPERATURE_CRITICAL_THRESHOLD 65
 
 #define THERMOMETERS_COUNT 7 //also defined in sensorsManager.h, including it just for one define is pointless
 #define THERMOMETER_MOSFET_ADC_CHANNEL 0
 #define THERMOMETER_SAMPLES_COUNT 5
-
+#define THERMOMETER_UNCONNECTED_MIN_VALUE 96 //if thermometer in DU is unconnected its reading is around 98-99C,
+//so we can detect faulty reading (assuming that measured temperature is less than that
+#define THERMOMETER_UNCONNECTED_VALUE 0 //value assigned to readings of unconnected thermometers (instead of 98-99)
 #define THERMOMETER_M1_INDEX 0
 #define THERMOMETER_M2_INDEX 1
 #define THERMOMETER_D1_INDEX 2
@@ -36,12 +41,11 @@ public:
 	ControlUnit()
 	{
 		batteryLoad = 0;
-		batteryLoadUpdateTimer = 0;
-		lcdUpdateTimer = 0;
+		batteryLoadUpdateTimer = boardStateUpdateTimer = lcdUpdateTimer = 0;
 		latestPacket = NULL;
 		temperaturesOk = true;
 		newPacketReceived = false;
-		highestTemperature = mosfetTemperature = 20;
+		mosfetTemperature = 20;
 		highestTemperatureIndex = 0;
 	}
 	
@@ -55,12 +59,23 @@ public:
 	{
 		batteryLoadUpdateTimer += INTERRUPT_PERIOD_MS;
 		lcdUpdateTimer += INTERRUPT_PERIOD_MS;
+		boardStateUpdateTimer += INTERRUPT_PERIOD_MS;
+		
+		//analyze packet(if new received), read other sensors, check if parameters are in allowed boundaries
+		if(boardStateUpdateTimer >= BOARD_STATE_UPDATE_PERIOD_MS) {
+			boardStateUpdateTimer = 0;
+			updateBoardState();
+			checkParameters();
+			updateStateControls();
+		}
+		
+		//simple current integration to get drawn load
 		if(batteryLoadUpdateTimer >= BATTERY_LOAD_UPDATE_PERIOD_MS) {
 			batteryLoadUpdateTimer = 0;
 			batteryLoadUpdate();
 		}
 		
-		
+		//display data on LCD
 		if(lcdUpdateTimer >= LCD_UPDATE_PERIOD_MS) {
 			lcdUpdateTimer = 0;
 			lcdUpdate();
@@ -79,10 +94,19 @@ private:
 	{
 		if(newPacketReceived) {
 			extractDataFromPacket();
-			updateMosfetTemperature();
-			//TODO
+			findHighestTemperature();
 		}
+		updateMosfetTemperature();
+		//get motors battery voltage
+		//get cu battery voltage
+	}
 	
+	void checkParameters()
+	{
+		findHighestTemperature();
+		temperaturesOk = (getHighestTemperature() < TEMPERATURE_WARNING_THRESHOLD);
+		
+		
 	}
 
 	void lcdUpdate()
@@ -152,14 +176,20 @@ private:
 	void extractDataFromPacket()
 	{
 		latestPacket->loadTemperaturesToArray(temperatures);
+		m1current = latestPacket->Ia.toFloat();
+		m2current = latestPacket->Ib.toFloat();
 		
+		
+	}
+	
+	void findHighestTemperature()
+	{
 		highestTemperatureIndex = findMaxIntIndex(temperatures, THERMOMETERS_COUNT);
-		highestTemperature = temperatures[highestTemperatureIndex];
-		if(highestTemperature >= TEMPERATURE_WARNING_THRESHOLD) {
-			temperaturesOk = false;
-		} else {
-			temperaturesOk = true;
-		}
+	}
+	
+	int getHighestTemperature()
+	{
+		return temperatures[highestTemperatureIndex];
 	}
 	
 	void updateMosfetTemperature()
@@ -200,27 +230,25 @@ private:
 		return (m1current + m2current);
 	}
 	
-	void lcdPrintFloat(float number)
-	{
-		LCD_int((int)number);
-		LCD_char('.');
-		int frac = (int)(number*10) % 10;
-		LCD_int(frac);
-	}
 	
-	float batteryLoad; //in mAh
 	unsigned long lcdUpdateTimer;
 	unsigned long batteryLoadUpdateTimer;
+	unsigned long boardStateUpdateTimer;
+	
 	bool newPacketReceived;
 	Packet *latestPacket;
 	
 	Thermometer mosfetThermometer;
 	
 	float m1current, m2current;
+	float batteryLoad; //in mAh
 	
 	int temperatures[THERMOMETERS_COUNT];
 	int highestTemperatureIndex;
+	
 	bool temperaturesOk;
+	bool cuBatteryVoltageOk;
+	bool motorsBatteryVoltageOk;
 };
 
 #endif
