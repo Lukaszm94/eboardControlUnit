@@ -31,9 +31,16 @@
 #define THERMOMETER_I2_INDEX 5
 #define THERMOMETER_MOSFET_INDEX 6
 
-#define MOTORS_BATTERY_VOLTAGE_ADC_CHANNEL 1
-#define MOTORS_BATTERY_VOLTAGE_COEFFICIENT ((10 + 120) / 10) // R1=120k, R2=10k
-#define MOTORS_BATTERY_VOLTAGE_SAMPLES_COUNT 5
+#define MOTOR_BATTERY_VOLTAGE_ADC_CHANNEL 0
+#define MOTOR_BATTERY_VOLTAGE_COEFFICIENT ((10 + 120) / 10) // R1=120k, R2=10k
+#define MOTOR_BATTERY_VOLTAGE_SAMPLES_COUNT 5
+#define MOTOR_BATTERY_VOLTAGE_WARNING_THRESHOLD (3.4 * 6)
+#define MOTOR_BATTERY_DISCONNECTED_THRESHOLD 2.0 // if battery is disconnected voltage divide is pulled to ground by attached resistor
+
+#define CU_BATTERY_VOLTAGE_ADC_CHANNEL 1
+#define CU_BATTERY_VOLTAGE_COEFFICIENT ((10 + 40) / 10) // R1=40k, R2=10k
+#define CU_BATTERY_VOLTAGE_SAMPLES_COUNT 5
+#define CU_BATTERY_VOLTAGE_WARNING_THRESHOLD (3.4 * 3)
 
 class ControlUnit
 {
@@ -43,7 +50,7 @@ public:
 		batteryLoad = 0;
 		batteryLoadUpdateTimer = boardStateUpdateTimer = lcdUpdateTimer = 0;
 		latestPacket = NULL;
-		temperaturesOk = true;
+		motorBatteryVoltageOk = cuBatteryVoltageOk = temperaturesOk = true;
 		newPacketReceived = false;
 		mosfetTemperature = 20;
 		highestTemperatureIndex = 0;
@@ -97,29 +104,26 @@ private:
 			findHighestTemperature();
 		}
 		updateMosfetTemperature();
-		//get motors battery voltage
-		//get cu battery voltage
+		motorBatteryVoltage = getMotorBatteryVoltage();
+		cuBatteryVoltage = getCuBatteryVoltage();
 	}
 	
 	void checkParameters()
 	{
-		findHighestTemperature();
-		temperaturesOk = (getHighestTemperature() < TEMPERATURE_WARNING_THRESHOLD);
+		temperaturesOk = isTemperatureOk();
+		cuBatteryVoltageOk = isCuBatteryOk();
+		motorBatteryVoltageOk = isMotorBatteryOk();
 		
+	}
+	
+	void updateStateControls()
+	{
 		
 	}
 
 	void lcdUpdate()
 	{
-		if(latestPacket == NULL) {
-			return;
-		}
-		if(newPacketReceived) {
-			newPacketReceived = false;
-			analyzePacket();
-		}
-		mosfetTemperature = readMosfetTemperature();
-		
+		//TODO
 		displayData();
 	}
 	
@@ -211,18 +215,39 @@ private:
 	int readMosfetTemperature()
 	{
 		mosfetThermometer.insertNewReading(ADConverter::getAverageVoltage(THERMOMETER_MOSFET_ADC_CHANNEL, THERMOMETER_SAMPLES_COUNT));
-		
-		Debug::print("Mosfet temp: ");
-		Debug::println((int)mosfetThermometer.getMeasuredValue());
-		
 		return (int)mosfetThermometer.getMeasuredValue();
 	}
 	
-	float getBatteryVoltage()
+	float getMotorBatteryVoltage()
 	{
-		float batVADC = ADConverter::getAverageVoltage(MOTORS_BATTERY_VOLTAGE_ADC_CHANNEL , MOTORS_BATTERY_VOLTAGE_SAMPLES_COUNT);
-		return (batVADC*MOTORS_BATTERY_VOLTAGE_COEFFICIENT);
+		float batVADC = ADConverter::getAverageVoltage(MOTOR_BATTERY_VOLTAGE_ADC_CHANNEL , MOTOR_BATTERY_VOLTAGE_SAMPLES_COUNT);
+		return (batVADC*MOTOR_BATTERY_VOLTAGE_COEFFICIENT);
+	}
+	
+	//checks if battery is connected and if voltage is higher than min level
+	bool isMotorBatteryOk()
+	{
+		bool lowVoltage = (motorBatteryVoltage < MOTOR_BATTERY_VOLTAGE_WARNING_THRESHOLD);
+		motorBatteryConnected = (motorBatteryVoltage > MOTOR_BATTERY_DISCONNECTED_THRESHOLD);
 		
+		return (!lowVoltage && motorBatteryConnected);
+	}
+	
+	bool isCuBatteryOk()
+	{
+		return (cuBatteryVoltage > CU_BATTERY_VOLTAGE_WARNING_THRESHOLD);
+	}
+	
+	bool isTemperatureOk()
+	{
+		findHighestTemperature();
+		return (getHighestTemperature() < TEMPERATURE_WARNING_THRESHOLD);
+	}
+	
+	float getCuBatteryVoltage()
+	{
+		float batVADC = ADConverter::getAverageVoltage(CU_BATTERY_VOLTAGE_ADC_CHANNEL , CU_BATTERY_VOLTAGE_SAMPLES_COUNT);
+		return (batVADC*CU_BATTERY_VOLTAGE_COEFFICIENT);
 	}
 	
 	float getTotalMotorsCurrent()
@@ -243,12 +268,16 @@ private:
 	float m1current, m2current;
 	float batteryLoad; //in mAh
 	
+	float motorBatteryVoltage;
+	float cuBatteryVoltage;
+	
 	int temperatures[THERMOMETERS_COUNT];
 	int highestTemperatureIndex;
 	
 	bool temperaturesOk;
 	bool cuBatteryVoltageOk;
-	bool motorsBatteryVoltageOk;
+	bool motorBatteryVoltageOk;
+	bool motorBatteryConnected;
 };
 
 #endif
