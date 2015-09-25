@@ -2,12 +2,17 @@
 #define CONTROLUNIT_H
 
 #include "KS0108.h"
-#include "../common/timer0.h"
-#include "../common/packet.h"
-#include "../common/debug.h"
-#include "../common/thermometer.h"
-#include "../common/adconverter.h"
+#include "common/avriomanip.h"
+#include "common/timer0.h"
+#include "common/packet.h"
+#include "common/debug.h"
+#include "common/thermometer.h"
+#include "common/adconverter.h"
+#include "common/rgbled.h"
 
+#define NULL 0
+
+#define BOARD_STATE_UPDATE_PERIOD_MS 200
 #define BATTERY_LOAD_UPDATE_PERIOD_MS 200
 #define LCD_UPDATE_PERIOD_MS 500
 #define MILIAMPEROSECONDS_TO_MILIAMPEROHOURS 1.0/(60*60)
@@ -36,11 +41,17 @@
 #define MOTOR_BATTERY_VOLTAGE_SAMPLES_COUNT 5
 #define MOTOR_BATTERY_VOLTAGE_WARNING_THRESHOLD (3.4 * 6)
 #define MOTOR_BATTERY_DISCONNECTED_THRESHOLD 2.0 // if battery is disconnected voltage divide is pulled to ground by attached resistor
+#define MOTOR_BATTERY_SWITCH_PORT B //TODO
+#define MOTOR_BATTERY_SWITCH_PIN 1 //TODO
 
 #define CU_BATTERY_VOLTAGE_ADC_CHANNEL 1
 #define CU_BATTERY_VOLTAGE_COEFFICIENT ((10 + 40) / 10) // R1=40k, R2=10k
 #define CU_BATTERY_VOLTAGE_SAMPLES_COUNT 5
 #define CU_BATTERY_VOLTAGE_WARNING_THRESHOLD (3.4 * 3)
+
+#define STATE_CONTROL_BLINK_FAST_PERIOD 500
+#define STATE_CONTROL_BLINK_SLOW_PERIOD 1500
+#define STATE_CONTROL_BLINK_DUTY_CYCLE 50
 
 class ControlUnit
 {
@@ -48,12 +59,16 @@ public:
 	ControlUnit()
 	{
 		batteryLoad = 0;
-		batteryLoadUpdateTimer = boardStateUpdateTimer = lcdUpdateTimer = 0;
+		batteryLoadUpdateTimer = boardStateUpdateTimer = stateControlsTimer = lcdUpdateTimer = 0;
 		latestPacket = NULL;
 		motorBatteryVoltageOk = cuBatteryVoltageOk = temperaturesOk = true;
 		newPacketReceived = false;
-		mosfetTemperature = 20;
 		highestTemperatureIndex = 0;
+		
+		uint8_t motorRGBPins[] = {1,2,3};
+		motorsRGB.init(&PORTA, &DDRA, motorRGBPins);
+		uint8_t temperatureRGBPins[] = {4,5,6};
+		temperatureRGB.init(&PORTA, &DDRA, temperatureRGBPins);
 	}
 	
 	void init()
@@ -67,6 +82,7 @@ public:
 		batteryLoadUpdateTimer += INTERRUPT_PERIOD_MS;
 		lcdUpdateTimer += INTERRUPT_PERIOD_MS;
 		boardStateUpdateTimer += INTERRUPT_PERIOD_MS;
+		stateControlsTimer += INTERRUPT_PERIOD_MS;
 		
 		//analyze packet(if new received), read other sensors, check if parameters are in allowed boundaries
 		if(boardStateUpdateTimer >= BOARD_STATE_UPDATE_PERIOD_MS) {
@@ -74,6 +90,12 @@ public:
 			updateBoardState();
 			checkParameters();
 			updateStateControls();
+		}
+		
+		if(stateControlsTimer >= RGBLED_UPDATE_INTERVAL_MS) {
+			stateControlsTimer = 0;
+			motorsRGB.update();
+			temperatureRGB.update();
 		}
 		
 		//simple current integration to get drawn load
@@ -118,7 +140,16 @@ private:
 	
 	void updateStateControls()
 	{
+		if(isMotorBatteryConnected()) {
+			if(isMotorBatterySwitchOn()) {
+				motorsRGB.setSolid(GREEN);
+			} else {
+				motorsRGB.setBlinking(GREEN, STATE_CONTROL_BLINK_SLOW_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
+			}
+		}
 		
+		if(isMotorBatteryOk())
+		//TODO
 	}
 
 	void lcdUpdate()
@@ -139,42 +170,7 @@ private:
 	
 	void displayData()
 	{
-		LCD_clear();
-		LCD_goto(0,0);
-		int current = latestPacket->Ia.getInteger(); //TOFIX
-		if(latestPacket->Ia.getFractional() >= 5) {
-			current++;
-		}
-		LCD_int(current);
-		LCD_str("A ");
-		current = latestPacket->Ib.getInteger(); //TOFIX
-		if(latestPacket->Ib.getFractional() >= 5) {
-			current++;
-		}
-		LCD_int(current);
-		LCD_str("A ");
 		
-		LCD_goto(9,0); //first line, display load
-		LCD_int((int)(batteryLoad + 0.5));
-		LCD_goto(13,0);
-		LCD_str("mAh");
-		
-		//second line
-		LCD_goto(0,1);
-		LCD_str("T ");
-		if(temperaturesOk) {
-			LCD_str("ok "); 
-			//enough space on LCD to print battery voltage
-			lcdPrintFloat(getBatteryVoltage());
-		} else {
-			LCD_str("not OK");
-		}
-		
-		LCD_goto(11,1);
-		LCD_int(highestTemperatureIndex + 1);
-		LCD_char('H');
-		LCD_int(highestTemperature);
-		LCD_char('C');
 	}
 	
 	void extractDataFromPacket()
@@ -228,9 +224,14 @@ private:
 	bool isMotorBatteryOk()
 	{
 		bool lowVoltage = (motorBatteryVoltage < MOTOR_BATTERY_VOLTAGE_WARNING_THRESHOLD);
-		motorBatteryConnected = (motorBatteryVoltage > MOTOR_BATTERY_DISCONNECTED_THRESHOLD);
+		motorBatteryConnected = isMotorBatteryConnected();
 		
 		return (!lowVoltage && motorBatteryConnected);
+	}
+	
+	bool isMotorBatteryConnected()
+	{
+		return (motorBatteryVoltage > MOTOR_BATTERY_DISCONNECTED_THRESHOLD);
 	}
 	
 	bool isCuBatteryOk()
@@ -255,10 +256,17 @@ private:
 		return (m1current + m2current);
 	}
 	
+	bool isMotorBatterySwitchOn()
+	{
+		return (PORT(MOTOR_BATTERY_SWITCH_PORT) & pin(MOTOR_BATTERY_SWITCH_PIN));
+	}
+	
+	
 	
 	unsigned long lcdUpdateTimer;
 	unsigned long batteryLoadUpdateTimer;
 	unsigned long boardStateUpdateTimer;
+	unsigned long stateControlsTimer;
 	
 	bool newPacketReceived;
 	Packet *latestPacket;
@@ -278,6 +286,9 @@ private:
 	bool cuBatteryVoltageOk;
 	bool motorBatteryVoltageOk;
 	bool motorBatteryConnected;
+	
+	RGBLed motorsRGB;
+	RGBLed temperatureRGB;
 };
 
 #endif

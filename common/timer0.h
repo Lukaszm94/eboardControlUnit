@@ -2,6 +2,7 @@
 #define TIMER0_h
 
 #define INTERRUPT_PERIOD_MS 10
+#define NULL 0
 
 class Timer0
 {
