@@ -7,7 +7,7 @@
 #define RGBLED_UPDATE_INTERVAL_MS 200
 
 enum {COMMON_ANODE = 0, COMMON_CATHODE};
-enum {RED = 0, GREEN, BLUE};
+enum {RED = 0, GREEN, BLUE, YELLOW};
 
 class RGBLed
 {
@@ -46,6 +46,11 @@ public:
 	
 	void setBlinking(uint8_t color, uint16_t periodMs, uint8_t dutyCyclePercent)
 	{
+		if(color >= YELLOW) {
+			//TODO turn on multiple LEDs
+			//temp workaround
+			color = BLUE;
+		}
 		singleLedOn(color); //leave only desired color on
 		blinking = true;
 		currentColor = color;
@@ -56,6 +61,11 @@ public:
 	
 	void setSolid(uint8_t color)
 	{
+		if(color >= YELLOW) {
+			//TODO turn on multiple LEDs
+			//temp workaround:
+			color = BLUE;
+		}
 		singleLedOn(color);
 		blinking = false;
 		currentColor = color;

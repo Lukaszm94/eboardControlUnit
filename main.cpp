@@ -1,7 +1,10 @@
 #include <avr/io.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>
 #include "controlUnit.h"
 #include "common/uartReceiver.h"
+#include "common/uart.h"
+#include "KS0108.h"
 
 /*
  * TODO:
@@ -18,23 +21,53 @@ volatile bool interruptFlag = false;
 
 extern "C" void __cxa_pure_virtual(void){};
 
+char uart1GetChar()
+{
+	char c = uart1_getc() & 0x00FF;
+	return c;
+}
+
 char uartGetChar()
 {
 	char c = uart_getc() & 0x00FF;
 	return c;
 }
 
+//#define F_CPU 16000000L
 int main(void)
 {
 	uartReceiver rx;
 	Packet receivedPacket;
 	
+	//serial for communication with DU
+	//DDRE |= (1<<PE1);
+	uart_init(UART_BAUD_SELECT(9600, F_CPU));
+	//serial for receiving data from GPS and sending debug data to PC
+	//DDRD |= (1<<PD3);
+	uart1_init(UART_BAUD_SELECT(9600, F_CPU));
+	
 	CU.init();
+	
 	timer.init();
 	timer.start();
 	
+	sei();
+	GLCD_ClearScreen();
+	GLCD_GoTo(0,0);
+	GLCD_WriteData(0xC3); //11000011
+	GLCD_GoTo(0,1);
+	GLCD_WriteData(0xFF);
+	GLCD_GoTo(1,0);
+	GLCD_WriteData(0xAA);
+	GLCD_GoTo(65,0);
+	GLCD_WriteData(0x0F);
 	while(1)
 	{
+		
+		/*while(uart1_available()) {
+			CU.newGPSChar(uart1GetChar());
+		}
+	
 		if(interruptFlag) {
 			interruptFlag = false;
 			CU.update();
@@ -51,13 +84,13 @@ int main(void)
 				rx.clear();
 				CU.onNewPacketReceived(&receivedPacket);
 			}
-		}
+		}*/
 	}
 	return 0;
 }
 
-/*ISR(TIMER0_COMPA_vect)
+ISR(TIMER0_COMPA_vect)
 {
 	//PORTC ^= (1<<testLedPin);
 	interruptFlag = true;
-}*/
+}

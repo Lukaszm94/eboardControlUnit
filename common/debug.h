@@ -11,7 +11,7 @@ public:
     static inline void init()
     {
 		#if DEBUG_ON
-		DDRD |= (1<<PD1);
+		//DDRD |= (1<<PD1);
 		uart_init(UART_BAUD_SELECT(9600, F_CPU));
 		#endif
     }

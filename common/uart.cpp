@@ -251,8 +251,8 @@ Date        Description
   #define ATMEGA_USART0
   #define ATMEGA_USART1
   #define UART0_RECEIVE_INTERRUPT   USART0_RX_vect
-  #define UART1_RECEIVE_INTERRUPT   USART0_UDRE_vect
-  #define UART0_TRANSMIT_INTERRUPT  USART1_RX_vect
+  #define UART1_RECEIVE_INTERRUPT   USART1_RX_vect
+  #define UART0_TRANSMIT_INTERRUPT  USART0_UDRE_vect
   #define UART1_TRANSMIT_INTERRUPT  USART1_UDRE_vect
   #define UART0_STATUS   UCSR0A
   #define UART0_CONTROL  UCSR0B
@@ -791,6 +791,15 @@ void uart1_flush(void)
 }/* uart1_flush */
 
 
+void uart1_putint(int value, uint8_t radix) {
+	char string[16];			// bufor na wynik funkcji itoa
+	itoa(value, string, radix);		// konwersja value na ASCII
+	uart1_puts(string);			// wyœlij string na port szeregowy
+}
 
+void uart1_endl() {
+	uart1_putc('\r');
+	uart1_putc('\n');
+}
 
 #endif

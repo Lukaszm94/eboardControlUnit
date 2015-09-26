@@ -1,5 +1,10 @@
 #ifndef TIMER0_h
 #define TIMER0_h
+/* Timer0 class
+ * if you call start(), you need to have ISR in your main file, otherwise weird stuff happens
+ *
+ *
+ */
 
 #define INTERRUPT_PERIOD_MS 10
 #define NULL 0

@@ -17,8 +17,8 @@
 #define KS0108_RW			(1 << 1)
 #define KS0108_EN			(1 << 0)
 
-#define KS0108_CS1			(1 << 6)
-#define KS0108_CS2			(1 << 5)
+#define KS0108_CS1			(1 << 5)
+#define KS0108_CS2			(1 << 6)
 #define KS0108_CS3			(1 << 5)
 
 extern unsigned char screen_x;

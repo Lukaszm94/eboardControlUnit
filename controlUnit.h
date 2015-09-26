@@ -9,6 +9,7 @@
 #include "common/thermometer.h"
 #include "common/adconverter.h"
 #include "common/rgbled.h"
+#include "common/gpsodometry.h"
 
 #define NULL 0
 
@@ -59,7 +60,7 @@ public:
 	ControlUnit()
 	{
 		batteryLoad = 0;
-		batteryLoadUpdateTimer = boardStateUpdateTimer = stateControlsTimer = lcdUpdateTimer = 0;
+		batteryLoadUpdateTimer = boardStateUpdateTimer = stateControlsTimer = lcdUpdateTimer = odometerTimer = 0;
 		latestPacket = NULL;
 		motorBatteryVoltageOk = cuBatteryVoltageOk = temperaturesOk = true;
 		newPacketReceived = false;
@@ -69,12 +70,14 @@ public:
 		motorsRGB.init(&PORTA, &DDRA, motorRGBPins);
 		uint8_t temperatureRGBPins[] = {4,5,6};
 		temperatureRGB.init(&PORTA, &DDRA, temperatureRGBPins);
+		odometer.init();
 	}
 	
 	void init()
 	{
 		ADConverter::init();
 		GLCD_Initalize();
+		odometer.init();
 	}
 
 	void update()
@@ -83,6 +86,7 @@ public:
 		lcdUpdateTimer += INTERRUPT_PERIOD_MS;
 		boardStateUpdateTimer += INTERRUPT_PERIOD_MS;
 		stateControlsTimer += INTERRUPT_PERIOD_MS;
+		odometerTimer += INTERRUPT_PERIOD_MS;
 		
 		//analyze packet(if new received), read other sensors, check if parameters are in allowed boundaries
 		if(boardStateUpdateTimer >= BOARD_STATE_UPDATE_PERIOD_MS) {
@@ -104,6 +108,11 @@ public:
 			batteryLoadUpdate();
 		}
 		
+		if(odometerTimer >= GPS_ODOMETRY_UPDATE_INTERVAL_MS) {
+			odometerTimer = 0;
+			odometer.update();
+		}
+		
 		//display data on LCD
 		if(lcdUpdateTimer >= LCD_UPDATE_PERIOD_MS) {
 			lcdUpdateTimer = 0;
@@ -116,16 +125,22 @@ public:
 		latestPacket = pack;
 		newPacketReceived = true;
 	}
+	
+	inline void newGPSChar(char c)
+	{
+		odometer.onNewGPSChar(c);
+	}
 
 
-private:
+//private:
 	void updateBoardState()
 	{
 		if(newPacketReceived) {
 			extractDataFromPacket();
-			findHighestTemperature();
 		}
 		updateMosfetTemperature();
+		sanitizeTemperatures();
+		findHighestTemperature();
 		motorBatteryVoltage = getMotorBatteryVoltage();
 		cuBatteryVoltage = getCuBatteryVoltage();
 	}
@@ -141,15 +156,26 @@ private:
 	void updateStateControls()
 	{
 		if(isMotorBatteryConnected()) {
-			if(isMotorBatterySwitchOn()) {
-				motorsRGB.setSolid(GREEN);
+			if(isMotorBatteryLow()) {
+				motorsRGB.setBlinking(YELLOW, STATE_CONTROL_BLINK_FAST_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
 			} else {
-				motorsRGB.setBlinking(GREEN, STATE_CONTROL_BLINK_SLOW_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
+				if(isMotorBatterySwitchOn()) {
+					motorsRGB.setSolid(GREEN);
+				} else {
+					motorsRGB.setBlinking(GREEN, STATE_CONTROL_BLINK_SLOW_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
+				}
 			}
+		} else {
+			motorsRGB.setBlinking(YELLOW, STATE_CONTROL_BLINK_SLOW_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
 		}
 		
-		if(isMotorBatteryOk())
-		//TODO
+		if(isTemperatureOk()) {
+			temperatureRGB.setSolid(GREEN);
+		} else if(getHighestTemperature() < TEMPERATURE_CRITICAL_THRESHOLD) {
+			temperatureRGB.setBlinking(YELLOW, STATE_CONTROL_BLINK_FAST_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
+		} else {
+			temperatureRGB.setBlinking(RED, STATE_CONTROL_BLINK_FAST_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
+		}
 	}
 
 	void lcdUpdate()
@@ -178,8 +204,15 @@ private:
 		latestPacket->loadTemperaturesToArray(temperatures);
 		m1current = latestPacket->Ia.toFloat();
 		m2current = latestPacket->Ib.toFloat();
-		
-		
+	}
+	
+	void sanitizeTemperatures()
+	{
+		for(int i = 0; i < THERMOMETERS_COUNT; i++) {
+			if(temperatures[i] >= THERMOMETER_UNCONNECTED_MIN_VALUE) {
+				temperatures[i] = THERMOMETER_UNCONNECTED_VALUE;
+			}
+		}
 	}
 	
 	void findHighestTemperature()
@@ -223,10 +256,15 @@ private:
 	//checks if battery is connected and if voltage is higher than min level
 	bool isMotorBatteryOk()
 	{
-		bool lowVoltage = (motorBatteryVoltage < MOTOR_BATTERY_VOLTAGE_WARNING_THRESHOLD);
+		bool lowVoltage = isMotorBatteryLow();
 		motorBatteryConnected = isMotorBatteryConnected();
 		
 		return (!lowVoltage && motorBatteryConnected);
+	}
+	
+	bool isMotorBatteryLow()
+	{
+		return (motorBatteryVoltage < MOTOR_BATTERY_VOLTAGE_WARNING_THRESHOLD);
 	}
 	
 	bool isMotorBatteryConnected()
@@ -267,6 +305,7 @@ private:
 	unsigned long batteryLoadUpdateTimer;
 	unsigned long boardStateUpdateTimer;
 	unsigned long stateControlsTimer;
+	unsigned long odometerTimer;
 	
 	bool newPacketReceived;
 	Packet *latestPacket;
@@ -289,6 +328,7 @@ private:
 	
 	RGBLed motorsRGB;
 	RGBLed temperatureRGB;
+	GPSOdometry odometer;
 };
 
 #endif

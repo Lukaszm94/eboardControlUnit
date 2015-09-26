@@ -247,6 +247,9 @@ extern int uart1_available(void);
 /** @brief   Flush bytes waiting in receive buffer */
 extern void uart1_flush(void);
 
+extern void uart1_putint(int value, uint8_t radix=10);
+extern void uart1_endl();
+
 /**@}*/
 
 
