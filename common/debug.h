@@ -63,14 +63,32 @@ public:
     static inline void println(char *str)
     {
 		#if DEBUG_ON
-        print(str);
-        endl();
+		print(str);
+		endl();
 		#endif
     }
+	
+	static inline void hex(char c)
+	{
+		char MSQuad = (c&0xF0)>>4;
+		char LSQuad = c&0x0F;
+		print(quadToHex(MSQuad));
+		print(quadToHex(LSQuad));
+	}
 
 
-
-
+private:
+	static inline char quadToHex(char c)
+	{
+		if((c >= 0) && (c <= 9)) {
+			return ('0' + c);
+		}
+		if((c >= 10) && (c <= 15)) {
+			return ('A' + c - 10);
+		}
+		//something is wrong
+		return 'x';
+	}
 
 
 

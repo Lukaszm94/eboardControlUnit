@@ -84,6 +84,7 @@ Date        Description
  
 /**@{*/
 
+#include <stdint.h>
 
 #if (__GNUC__ * 100 + __GNUC_MINOR__) < 304
 #error "This library requires AVR-GCC 3.4 or later, update to newer AVR-GCC compiler !"
@@ -117,9 +118,9 @@ Date        Description
 #endif
 
 /* test if the size of the circular buffers fits into SRAM */
-#if ( (UART_RX_BUFFER_SIZE+UART_TX_BUFFER_SIZE) >= (RAMEND-0x60 ) )
+/*#if ( (UART_RX_BUFFER_SIZE+UART_TX_BUFFER_SIZE) >= (RAMEND-0x60 ) )
 #error "size of UART_RX_BUFFER_SIZE + UART_TX_BUFFER_SIZE larger than size of SRAM"
-#endif
+#endif*/
 
 /* 
 ** high byte error return code of uart_getc()

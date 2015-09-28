@@ -1,9 +1,9 @@
-#ifdef __AVR__
+/*#ifdef __AVR__
   #include <avr/pgmspace.h>
   static const char PROGMEM  font5x8[] = {
-#else 
+#else */
   static const char  font5x8[] = {
-#endif
+//#endif
 0x00, 0x00, 0x00, 0x00, 0x00,// (spacja)
 0x00, 0x00, 0x5F, 0x00, 0x00,// !
 0x00, 0x07, 0x00, 0x07, 0x00,// "

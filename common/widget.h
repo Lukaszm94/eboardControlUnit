@@ -18,7 +18,7 @@ public:
 		if(outputBuffer != NULL) {
 			return;
 		}
-		outputBuffer = (char*)malloc(width*height);
+		outputBuffer = (char*)malloc(width*height/8);
 		width = width_;
 		height = height_;
 		if(outputBuffer == NULL) {
@@ -48,7 +48,7 @@ public:
 	{
 		return height;
 	}
-protected:
+//protected:
 	void setOctet(char octet, int x, int y)
 	{
 		int verticalOcetets = height/8;

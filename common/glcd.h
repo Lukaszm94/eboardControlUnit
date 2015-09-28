@@ -45,27 +45,43 @@ public:
 			redrawWidget(i);
 		}
 	}
-private:
+//private:
 	void redrawWidget(int i)
 	{
 		int xStart = widgetsData[i].xPos;
-		int yStart = widgetsData[i].yPos;
+		int yStart = widgetsData[i].yPos/8;
 		Widget* widget = widgetsData[i].widget;
 		char* buffer = widget->getBitmap();
 		#if !ROTATED_180
 		int width = widget->getWidth();
 		int height = widget->getHeight()/8;
-		for(int x = 0; x < width; x++) {
+		
+		for(int y = 0; y < height; y++) {
+			GLCD_GoTo(xStart, yStart + y);
+			drawHorizontalOctets(buffer + y, width, height);
+		}
+		
+		/*for(int x = 0; x < width; x++) {
 			for(int y = 0; y < height; y++) {
 				char octet = buffer[x*height + y];
+				//GLCD_GoTo(xStart + x, yStart + 8*y);
+				GLCD_GoTo(yStart + 8*y, xStart + x);
 				GLCD_WriteData(octet);
 			}
-		}
+		}*/
 		#else
 		xStart = KS0108_SCREEN_WIDTH - widgetsData[i].xPos;
 		yStart = KS0108_SCREEN_HEIGHT - widgetsData[i].yPos;
 		//TODO implement drawing rotated bitmaps
 		#endif
+	}
+	
+	void drawHorizontalOctets(char* buffer, int width, int height)
+	{
+		for(int i = 0; i < width; i++) {
+			GLCD_WriteData(*buffer);
+			buffer += height;
+		}
 	}
 	
 	int widgetCount;

@@ -19,7 +19,7 @@ for(i = 0; i < 3; i++)
   GLCD_WriteCommand((DISPLAY_ON_CMD | ON), i);
 }
 //-------------------------------------------------------------------------------------------------
-//
+// x - horizontal position, y - vertical position
 //-------------------------------------------------------------------------------------------------
 void GLCD_GoTo(unsigned char x, unsigned char y)
 {
