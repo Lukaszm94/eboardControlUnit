@@ -10,8 +10,9 @@
 #include "common/adconverter.h"
 #include "common/rgbled.h"
 #include "common/gpsodometry.h"
+#include "common/glcd.h"
+#include "common/label.h"
 
-#define NULL 0
 
 #define BOARD_STATE_UPDATE_PERIOD_MS 200
 #define BATTERY_LOAD_UPDATE_PERIOD_MS 200
@@ -76,7 +77,7 @@ public:
 	void init()
 	{
 		ADConverter::init();
-		GLCD_Initalize();
+		glcd.init();
 		odometer.init();
 	}
 
@@ -329,6 +330,8 @@ public:
 	RGBLed motorsRGB;
 	RGBLed temperatureRGB;
 	GPSOdometry odometer;
+	GLCD glcd;
+	Label speedLabel;
 };
 
 #endif

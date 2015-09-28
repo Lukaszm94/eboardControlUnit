@@ -12,21 +12,21 @@ public:
     {
 		#if DEBUG_ON
 		//DDRD |= (1<<PD1);
-		uart_init(UART_BAUD_SELECT(9600, F_CPU));
+		uart1_init(UART_BAUD_SELECT(9600, F_CPU));
 		#endif
     }
 
     static inline void endl()
     {
 		#if DEBUG_ON
-		uart_endl();
+		uart1_endl();
 		#endif
     }
     //int
     static inline void print(int number)
     {
 		#if DEBUG_ON
-		uart_putint(number);
+		uart1_putint(number);
 		#endif
     }
     static inline void println(int number)
@@ -41,7 +41,7 @@ public:
     static inline void print(char c)
     {
 		#if DEBUG_ON
-		uart_putc(c);
+		uart1_putc(c);
 		#endif
     }
 
@@ -57,7 +57,7 @@ public:
     static inline void print(char *str)
     {
 		#if DEBUG_ON
-		uart_puts(str);
+		uart1_puts(str);
 		#endif
     }
     static inline void println(char *str)

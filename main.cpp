@@ -4,7 +4,10 @@
 #include "controlUnit.h"
 #include "common/uartReceiver.h"
 #include "common/uart.h"
-#include "KS0108.h"
+#include "common/glcd.h"
+#include "common/label.h"
+
+#include "common/debug.h"
 
 /*
  * TODO:
@@ -21,7 +24,7 @@ volatile bool interruptFlag = false;
 
 extern "C" void __cxa_pure_virtual(void){};
 
-char uart1GetChar()
+/*char uart1GetChar()
 {
 	char c = uart1_getc() & 0x00FF;
 	return c;
@@ -31,12 +34,12 @@ char uartGetChar()
 {
 	char c = uart_getc() & 0x00FF;
 	return c;
-}
+}*/
 
 //#define F_CPU 16000000L
 int main(void)
 {
-	uartReceiver rx;
+	/*uartReceiver rx;
 	Packet receivedPacket;
 	
 	//serial for communication with DU
@@ -50,17 +53,21 @@ int main(void)
 	
 	timer.init();
 	timer.start();
-	
+	*/
+	Debug::init();
 	sei();
-	GLCD_ClearScreen();
-	GLCD_GoTo(0,0);
-	GLCD_WriteData(0xC3); //11000011
-	GLCD_GoTo(0,1);
-	GLCD_WriteData(0xFF);
-	GLCD_GoTo(1,0);
-	GLCD_WriteData(0xAA);
-	GLCD_GoTo(65,0);
-	GLCD_WriteData(0x0F);
+	GLCD glcd;
+	glcd.init();
+	Label label;
+	Debug::println("Initializing label");
+	label.init(20, 20);
+	Debug::println("Adding label to glcd");
+	glcd.addWidget(&label, 10, 10);
+	Debug::println("Setting text");
+	label.setText("c");
+	Debug::println("Redrawing");
+	glcd.redraw();
+	Debug::println("All done");
 	while(1)
 	{
 		

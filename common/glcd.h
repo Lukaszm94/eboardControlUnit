@@ -1,8 +1,10 @@
 #ifndef GLCD_H
 #define GLCD_H
 
+#include "widget.h"
+
 #define MAX_WIDGET_COUNT 10
-#define ROTATED_180 1
+#define ROTATED_180 0
 
 struct WidgetData
 {
@@ -19,13 +21,20 @@ public:
 		widgetCount = 0;
 	}
 	
+	void init()
+	{
+		GLCD_Initalize();
+		GLCD_ClearScreen();
+		GLCD_GoTo(0,0);
+	}
+	
 	void addWidget(Widget* newWidget, int x, int y)
 	{
 		if(widgetCount < MAX_WIDGET_COUNT) {
 			//add widget and its position to widgets vector
-			widgetsData[i].widget = newWidget;
-			widgetsData[i].xPos = x;
-			widgetsData[i].yPos = y;
+			widgetsData[widgetCount].widget = newWidget;
+			widgetsData[widgetCount].xPos = x;
+			widgetsData[widgetCount].yPos = y;
 			widgetCount++;
 		}
 	}
@@ -40,13 +49,13 @@ private:
 	void redrawWidget(int i)
 	{
 		int xStart = widgetsData[i].xPos;
-		int yStart = widgetData[i].yPos;
-		Widget* widget = widgetData[i].widget;
+		int yStart = widgetsData[i].yPos;
+		Widget* widget = widgetsData[i].widget;
 		char* buffer = widget->getBitmap();
 		#if !ROTATED_180
-		int width = widget->width()/8;
-		int height = widget->height()/8;
-		for(int x = 0; x < width; x++_ {
+		int width = widget->getWidth();
+		int height = widget->getHeight()/8;
+		for(int x = 0; x < width; x++) {
 			for(int y = 0; y < height; y++) {
 				char octet = buffer[x*height + y];
 				GLCD_WriteData(octet);
