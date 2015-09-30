@@ -6,7 +6,9 @@
 #include "common/uart.h"
 #include "common/glcd.h"
 #include "common/label.h"
+#include "common/eboardgui.h"
 
+#include "common/Timer1.h"
 #include "common/debug.h"
 
 /*
@@ -58,50 +60,17 @@ int main(void)
 	sei();
 	GLCD glcd;
 	glcd.init();
-	Label label;
-	Debug::println("Initializing label");
-	label.init(24, 16);
-	Debug::println("Adding label to glcd");
-	glcd.addWidget(&label, 0, 0);
-	label.setFontMultiplier(2);
-	Debug::println("Setting text");
-	label.setText("25");
-	Debug::println("Redrawing");
+	EboardGUI gui;
+	gui.init();
+	gui.addGUIToDisplay(&glcd);
 	glcd.redraw();
-	Debug::println("All done");
 	
-	/*Widget widget;
-	widget.init(2,16);
-	widget.outputBuffer[0] = 0xAA;
-	widget.outputBuffer[1] = 0xFF;
-	widget.outputBuffer[2] = 0x01;
-	widget.outputBuffer[3] = 0x80;
-	glcd.addWidget(&widget, 0, 0);
-	glcd.redraw();*/
-	int tens = 0;
-	char tab[3];
-	tab[2] = '/0';
 	while(1)
 	{
-		for(int i = 0; i < 7; i++) {
-			glcd.widgetsData[0].xPos = i*8;
-			glcd.widgetsData[0].yPos = i*8;
-			GLCD_ClearScreen();
-			glcd.redraw();
-			_delay_ms(100);
-		}
 		
 		
 		
-		/*for(int i = 0; i < 10; i++) {
-			tab[0] = '0' + tens;
-			tab[1] = '0' + i;
-			label.setText(tab);
-			glcd.redraw();
-		}
-		tens++;
-		if(tens == 10)
-			tens = 0;*/
+		
 		/*while(uart1_available()) {
 			CU.newGPSChar(uart1GetChar());
 		}

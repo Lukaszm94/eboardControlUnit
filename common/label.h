@@ -8,6 +8,10 @@
 
 #include "debug.h"
 
+#define VERTICAL_LINE_MAX_HEIGHT 8
+#define FONT_BASE_WIDTH 5
+#define FONT_BASE_HEIGHT 8
+
 class Label : public Widget
 {
 public:
@@ -16,17 +20,21 @@ public:
 	
 	//method to display bigger characters (x2, x3 etc of normal size)
 	//caller should take care to initially set Widget's size big enough
-	void setFontMultiplier(int multiplier);
+	void setFontMultiplier(uint8_t multiplier);
 
 private:
-	int countCharOccurence(char* str, char c, int strLength = -1);
-	int findLongestLineLength(char* str, int strLength = -1);
+	//uint8_t countCharOccurence(char* str, char c, uint8_t strLength = -1);
+	//uint8_t findLongestLineLength(char* str, uint8_t strLength = -1);
 	void copyFontBaseToBuffer(char* buffer, char c);
-	void drawVerticalLineToBuffer(char* buffer, char c, int multiplier);
-	void clearVerticalLineBuffer(char* buffer, int bytes);
-	void sendVerticalLine(char* buffer, int multiplier, int x, int y);
+	uint8_t drawLetterToBuffer(char c, uint8_t currentX);
 
-	int fontMultiplier;
+	void sendVerticalLineToBuffer(uint8_t x);
+	void sendBlankVerticalLine(uint8_t x);
+	void prepareSingleOutputColumn(char baseColumn);
+	void sendFontColumnToBuffer(uint8_t x);
+
+	uint8_t fontMultiplier;
+	char singleOutputColumn[VERTICAL_LINE_MAX_HEIGHT];
 };
 
 #endif

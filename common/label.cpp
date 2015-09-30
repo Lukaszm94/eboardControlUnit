@@ -1,8 +1,5 @@
 #include "label.h"
 
-#define FONT_BASE_WIDTH 5
-#define FONT_BASE_HEIGHT 8
-#define VERTICAL_LINE_MAX_HEIGHT 8
 
 Label::Label()
 {
@@ -11,57 +8,33 @@ Label::Label()
 
 void Label::setText(char* text)
 {
-	//TODO translate text to pixels and save it to outputBuffer
-	int currentX = padding, currentY = padding;
-	int textLength = strlen(text);
-	//int linesCount = countCharOccurence(text, '\n', textLength);
-	//int newLabelWidth = 2 * padding + FONT_BASE_WIDTH * fontMultiplier * findLongestLineLength(text, textLength);
-	//int newLabelHeight = 2 * padding + FONT_BASE_HEIGHT * fontMultiplier * linesCount;
-	/*if(newLabelWidth > width) {
-		newLabelWidth = width;
-	}
-	if(newLabelHeight > height) {
-		newLabelHeight = height;
-	}*/
-	char fontBaseChar[FONT_BASE_WIDTH];
-	char verticalBufferLine[VERTICAL_LINE_MAX_HEIGHT];
-	int verticalBufferIndex = 0;
-	for(int letterCount = 0; letterCount < textLength; letterCount++) {
+	//translate text to pixels and save it to outputBuffer
+	uint8_t currentX = 0;
+	uint8_t textLength = strlen(text);
+
+	
+	for(uint8_t letterCount = 0; letterCount < textLength; letterCount++) {
 		if(text[letterCount] == '\n') {
 			//TODO set currentX and currentY
 			continue;
 		}
-		copyFontBaseToBuffer(fontBaseChar, text[letterCount]);
-		clearVerticalLineBuffer(verticalBufferLine, VERTICAL_LINE_MAX_HEIGHT);
-		for(int i = 0; i < FONT_BASE_WIDTH; i++) {
-			drawVerticalLineToBuffer(verticalBufferLine, fontBaseChar[i], fontMultiplier);
-			sendVerticalLine(verticalBufferLine, fontMultiplier, currentX, currentY);
-			currentX += fontMultiplier;
-			/*Debug::print("Vertical line: ");
-			for(int j = 0; j < fontMultiplier; j++) {
-				Debug::hex(verticalBufferLine[j]);
-				Debug::print(' ');
-			}
-			Debug::endl();*/
-			clearVerticalLineBuffer(verticalBufferLine, fontMultiplier);
-		}
-		sendVerticalLine(verticalBufferLine, 1, currentX, currentY);
+		currentX = drawLetterToBuffer(text[letterCount], currentX);
 		currentX++;
 	}
 }
 
-void Label::setFontMultiplier(int multiplier)
+void Label::setFontMultiplier(uint8_t multiplier)
 {
 	fontMultiplier = multiplier;
 }
-
-int Label::countCharOccurence(char* str, char c, int strLength)
+/*
+uint8_t Label::countCharOccurence(char* str, char c, uint8_t strLength)
 {
-	int charCounter = 0;
+	uint8_t charCounter = 0;
 	if(strLength < 0) {
 		strLength = strlen(str);
 	}
-	for(int i = 0; i < strLength; i++) {
+	for(uint8_t i = 0; i < strLength; i++) {
 		if(str[i] == c) {
 			charCounter++;
 		}
@@ -69,14 +42,14 @@ int Label::countCharOccurence(char* str, char c, int strLength)
 	return charCounter;
 }
 
-int Label::findLongestLineLength(char* str, int strLength)
+uint8_t Label::findLongestLineLength(char* str, uint8_t strLength)
 {
-	int maxLineLength = 0;
-	int currentLineLength = 0;
+	uint8_t maxLineLength = 0;
+	uint8_t currentLineLength = 0;
 	if(strLength < 0) {
 		strLength = strlen(str);
 	}
-	for(int i = 0; i < strLength; i++) {
+	for(uint8_t i = 0; i < strLength; i++) {
 		if(str[i] == '\n') {
 			if(currentLineLength > maxLineLength)
 				maxLineLength = currentLineLength;
@@ -86,54 +59,70 @@ int Label::findLongestLineLength(char* str, int strLength)
 		}
 	}
 	return maxLineLength;
-}
+}*/
 
 void Label::copyFontBaseToBuffer(char* buffer, char c)
 {
 	c -= 32; 
-	for(int i = 0; i < 5; i++) {
-		//buffer[i] = (GLCD_ReadByteFromROMMemory((char *)((int)font5x8 + (5 * c) + i))); 
-		buffer[i] = *(font5x8 + (5 * c) + i);
+	for(uint8_t i = 0; i < 5; i++) {
+		buffer[i] = (GLCD_ReadByteFromROMMemory((char *)((int)font5x8 + (5 * c) + i))); 
+		//buffer[i] = *(font5x8 + (5 * c) + i);
 	}
-	//GLCD_WriteData(0x00); ???
 }
 
-void Label::drawVerticalLineToBuffer(char* buffer, char c, int multiplier)
+
+uint8_t Label::drawLetterToBuffer(char c, uint8_t currentX)
 {
-	int verticalBufferIndex = 0;
-	for(int i = 0; i < FONT_BASE_HEIGHT; i++) {
-		bool pixelSet = c & (1<<i);
-		for(int j = 0; j < fontMultiplier; j++) {
-			if(pixelSet) {
-				buffer[verticalBufferIndex/8] |= (1 << (verticalBufferIndex%8));
+	char fontBaseBuffer[FONT_BASE_WIDTH];
+	copyFontBaseToBuffer(fontBaseBuffer, c);
+	
+	for(uint8_t i = 0; i < FONT_BASE_WIDTH; i++) {
+		prepareSingleOutputColumn(fontBaseBuffer[i]);
+		sendFontColumnToBuffer(currentX);
+		currentX += fontMultiplier;
+	}
+	sendBlankVerticalLine(currentX);
+	return currentX;
+}
+
+void Label::prepareSingleOutputColumn(char baseColumn)
+{
+	uint8_t outputColumnCurrentPixel = 0;
+	
+	for(uint8_t basePixelCounter = 0; basePixelCounter < FONT_BASE_HEIGHT; basePixelCounter++) {
+		bool isPixelSet = baseColumn & (1<<basePixelCounter);
+		
+		for(uint8_t repeatBasePixelCounter = 0; repeatBasePixelCounter < fontMultiplier; repeatBasePixelCounter++) {
+			uint8_t outputColumnIndex = outputColumnCurrentPixel/8;
+			uint8_t mask = (1 << (outputColumnCurrentPixel%8));
+			if(isPixelSet) {
+				singleOutputColumn[outputColumnIndex] |= mask;
+			} else {
+				singleOutputColumn[outputColumnIndex] &= ~mask;
 			}
-			verticalBufferIndex++;
+			outputColumnCurrentPixel++;
 		}
 	}
+
 }
 
-void Label::clearVerticalLineBuffer(char* buffer, int bytes)
+void Label::sendFontColumnToBuffer(uint8_t x)
 {
-	for(int i = 0; i < bytes; i++) {
-		buffer[i] = 0;
-	}
-}
-
-void Label::sendVerticalLine(char* buffer, int multiplier, int x, int y)
-{
-	Debug::println("Printing vertical line:");
-	//send buffer 'multiplier' times
-	for(int i = 0; i < multiplier; i++) {
-		//send bytes of vertical line
-		for(int j = 0; j < multiplier; j++) {
-			/*Debug::print("Byte: ");
-			Debug::hex(buffer[j]);
-			Debug::print(", x: ");
-			Debug::print(x);
-			Debug::print(", y: ");
-			Debug::println(y + j*8);*/
-			setOctet(buffer[j], x, y + j*8);
+	//Debug::println("Send single column");
+	for(int columnsCounter = 0; columnsCounter < fontMultiplier; columnsCounter++) {
+		for(int columnIndex = 0; columnIndex < fontMultiplier; columnIndex++) {
+			//Debug::hex(singleOutputColumn[columnIndex]);
+			//Debug::print(' ');
+			setOctet(singleOutputColumn[columnIndex], x, columnIndex*8);
 		}
+		Debug::endl();
 		x++;
+	}
+}
+
+void Label::sendBlankVerticalLine(uint8_t x)
+{
+	for(uint8_t columnIndex = 0; columnIndex < fontMultiplier; columnIndex++) {
+		setOctet(0x00, x, columnIndex*8);
 	}
 }

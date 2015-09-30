@@ -36,7 +36,7 @@ public:
         endl();
 		#endif
     }
-
+	
     //char
     static inline void print(char c)
     {

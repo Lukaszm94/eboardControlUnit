@@ -13,11 +13,12 @@ public:
 	}
 	
 	//initialize output buffer. This method should be called only once!
-	void init(int width_, int height_)
+	void init(uint8_t width_, uint8_t height_)
 	{
 		if(outputBuffer != NULL) {
 			return;
 		}
+		//TODO add artificial dynamic memory allocation (allocate big tab and give chunks with fake malloc)
 		outputBuffer = (char*)malloc(width*height/8);
 		width = width_;
 		height = height_;
@@ -26,7 +27,7 @@ public:
 		}
 	}
 	
-	void setPadding(int newPadding)
+	void setPadding(uint8_t newPadding)
 	{
 		if(newPadding < 0) {
 			newPadding = 0;
@@ -39,26 +40,30 @@ public:
 		return outputBuffer;
 	}
 	
-	int getWidth()
+	inline uint8_t getWidth()
 	{
 		return width;
 	}
 	
-	int getHeight()
+	inline uint8_t getHeight()
 	{
 		return height;
 	}
 //protected:
-	void setOctet(char octet, int x, int y)
+	inline void setOctet(char octet, uint8_t x, uint8_t y)
 	{
-		int verticalOcetets = height/8;
+		uint8_t verticalOcetets = height/8;
 		char index = x*verticalOcetets + y/8;
+		if(index > width*height/8) {
+			Debug::println("Widget: Set octet: Index out of range");
+			return;
+		}
 		outputBuffer[index] = octet;
 	}
 
 	char* outputBuffer;
-	int width, height;
-	int padding; //number of blank pixels from widget's edge
+	uint8_t width, height;
+	uint8_t padding; //number of blank pixels from widget's edge
 };
 
 #endif
