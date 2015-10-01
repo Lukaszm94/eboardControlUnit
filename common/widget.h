@@ -19,12 +19,29 @@ public:
 			return;
 		}
 		//TODO add artificial dynamic memory allocation (allocate big tab and give chunks with fake malloc)
-		outputBuffer = (char*)malloc(width*height/8);
 		width = width_;
 		height = height_;
+		int memSize = ((unsigned long) width) * height / 8;
+		outputBuffer = (char*)malloc(memSize);
 		if(outputBuffer == NULL) {
 			Debug::println("Widget error: could not allocate memory for buffer.");
 		}
+		clearBuffer();
+	}
+	
+	void freeBuffer()
+	{
+		free(outputBuffer);
+		outputBuffer = NULL;
+	}
+	
+	void clearBuffer()
+	{
+		int buffLen = width * height / 8;
+		for(int i = 0; i < buffLen; i++) {
+			outputBuffer[i] = 0;
+		}
+	
 	}
 	
 	void setPadding(uint8_t newPadding)

@@ -19,6 +19,9 @@ public:
 	void setLoad(uint16_t newLoad);
 	void setCurrent(uint8_t newCurrent);
 private:
+	void floatToStr(char* buf, float number, int precision = 1);
+	void itoaRight(unsigned int value, int width, char* buffer);
+	
 	Label labels[LABELS_COUNT];
 
 };

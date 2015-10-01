@@ -115,7 +115,6 @@ void Label::sendFontColumnToBuffer(uint8_t x)
 			//Debug::print(' ');
 			setOctet(singleOutputColumn[columnIndex], x, columnIndex*8);
 		}
-		Debug::endl();
 		x++;
 	}
 }

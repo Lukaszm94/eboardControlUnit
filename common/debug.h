@@ -12,7 +12,7 @@ public:
     {
 		#if DEBUG_ON
 		//DDRD |= (1<<PD1);
-		uart1_init(UART_BAUD_SELECT(9600, F_CPU));
+		//uart1_init(UART_BAUD_SELECT(9600, F_CPU));
 		#endif
     }
 

@@ -14,8 +14,8 @@
 /*
  * TODO:
  * done- measuring CU's battery voltage
- * - displaying data on glcd
- * - modify timer setup
+ * done - displaying data on glcd
+ * done - modify timer setup
  * - assign correct ports,pins to rgbs and mosfet
  */
 
@@ -26,7 +26,7 @@ volatile bool interruptFlag = false;
 
 extern "C" void __cxa_pure_virtual(void){};
 
-/*char uart1GetChar()
+char uart1GetChar()
 {
 	char c = uart1_getc() & 0x00FF;
 	return c;
@@ -36,44 +36,46 @@ char uartGetChar()
 {
 	char c = uart_getc() & 0x00FF;
 	return c;
-}*/
+}
 
-//#define F_CPU 16000000L
+void clearUartBuffers()
+{
+	while(uart_available()) {
+		uart_getc();
+	}
+	while(uart1_available()) {
+		uart1_getc();
+	}
+}
+
+
 int main(void)
 {
-	/*uartReceiver rx;
+	uartReceiver rx;
 	Packet receivedPacket;
 	
+	sei();
 	//serial for communication with DU
-	//DDRE |= (1<<PE1);
+	DDRE |= (1<<PE1);
 	uart_init(UART_BAUD_SELECT(9600, F_CPU));
 	//serial for receiving data from GPS and sending debug data to PC
-	//DDRD |= (1<<PD3);
-	uart1_init(UART_BAUD_SELECT(9600, F_CPU));
+	DDRD |= (1<<PD3);
+	uart1_init(UART_BAUD_SELECT(57600, F_CPU));
+	clearUartBuffers();
+	Debug::println("UART initialized");
 	
 	CU.init();
+	Debug::init();
 	
+	CU.startupSequence();
 	timer.init();
 	timer.start();
-	*/
-	Debug::init();
-	sei();
-	GLCD glcd;
-	glcd.init();
-	EboardGUI gui;
-	gui.init();
-	gui.addGUIToDisplay(&glcd);
-	glcd.redraw();
 	
 	while(1)
 	{
-		
-		
-		
-		
 		/*while(uart1_available()) {
 			CU.newGPSChar(uart1GetChar());
-		}
+		}*/
 	
 		if(interruptFlag) {
 			interruptFlag = false;
@@ -82,16 +84,18 @@ int main(void)
 		
 		if(uart_available())
 		{
-			rx.receiveNewChar(uartGetChar());
+			char uartChar = uartGetChar();
+			rx.receiveNewChar(uartChar);
 			while(uart_available()) {
 				rx.receiveNewChar(uartGetChar());
 			}
 			if(rx.parseBuffer()) {
 				receivedPacket = rx.getPacket();
+				Debug::println("New packet");
 				rx.clear();
 				CU.onNewPacketReceived(&receivedPacket);
 			}
-		}*/
+		}
 	}
 	return 0;
 }

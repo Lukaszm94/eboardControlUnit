@@ -11,7 +11,7 @@
 #include "common/rgbled.h"
 #include "common/gpsodometry.h"
 #include "common/glcd.h"
-#include "common/label.h"
+#include "common/eboardgui.h"
 
 
 #define BOARD_STATE_UPDATE_PERIOD_MS 200
@@ -55,6 +55,9 @@
 #define STATE_CONTROL_BLINK_SLOW_PERIOD 1500
 #define STATE_CONTROL_BLINK_DUTY_CYCLE 50
 
+#define DU_START_SENDING_COMMAND ('b')
+#define DU_STOP_SENDING_COMMAND ('s')
+
 class ControlUnit
 {
 public:
@@ -78,7 +81,8 @@ public:
 	{
 		ADConverter::init();
 		glcd.init();
-		odometer.init();
+		//TODO odometer.init();
+		//TODO set MOSFET pin as output, turn MOSFET off
 	}
 
 	void update()
@@ -131,6 +135,36 @@ public:
 	{
 		odometer.onNewGPSChar(c);
 	}
+	
+	void startupSequence()
+	{
+		Label infoLabel;
+		infoLabel.init(128, 8);
+		glcd.addWidget(&infoLabel, 0, 0);
+		motorBatteryVoltage = getMotorBatteryVoltage();
+		if(!isMotorBatteryConnected()) {
+			infoLabel.setText("Motor battery not connected");
+			glcd.redraw();
+			//TODO set diode blinking
+			while(!isMotorBatteryConnected()) {
+				motorBatteryVoltage = getMotorBatteryVoltage();
+			}
+		}
+		turnMotorBatteryMosfetOn();
+		infoLabel.setText("All ok");
+		glcd.redraw();
+		_delay_ms(1000);
+		//if successfull - delete info label and draw regular gui
+		infoLabel.freeBuffer();
+		glcd.removeWidget(0);
+		gui.init();
+		gui.addGUIToDisplay(&glcd);
+		glcd.erase();
+		glcd.redraw();
+		
+		turnDUDataOn();
+		glcd.backlightOn();
+	}
 
 
 //private:
@@ -181,8 +215,11 @@ public:
 
 	void lcdUpdate()
 	{
-		//TODO
-		displayData();
+		gui.setSpeed((int)(odometer.getSpeed()+0.5));
+		gui.setDistance(odometer.getDistance());
+		gui.setCurrent((int)(getTotalMotorsCurrent() + 0.5));
+		gui.setLoad(batteryLoad);
+		glcd.redraw();
 	}
 	
 	void batteryLoadUpdate()
@@ -192,11 +229,6 @@ public:
 		}
 		float totalCurrent = latestPacket->Ia.toFloat() + latestPacket->Ib.toFloat();
 		batteryLoad += (totalCurrent * BATTERY_LOAD_UPDATE_PERIOD_MS)*MILIAMPEROSECONDS_TO_MILIAMPEROHOURS; //since dt is in ms, we get load in mAs, multimply that by 1/60*60 to get mAh
-		
-	}
-	
-	void displayData()
-	{
 		
 	}
 	
@@ -300,6 +332,16 @@ public:
 		return (PORT(MOTOR_BATTERY_SWITCH_PORT) & pin(MOTOR_BATTERY_SWITCH_PIN));
 	}
 	
+	void turnMotorBatteryMosfetOn()
+	{
+		//TODO
+	}
+	
+	void turnDUDataOn()
+	{
+		uart_putc(DU_START_SENDING_COMMAND);
+	}
+	
 	
 	
 	unsigned long lcdUpdateTimer;
@@ -331,7 +373,7 @@ public:
 	RGBLed temperatureRGB;
 	GPSOdometry odometer;
 	GLCD glcd;
-	Label speedLabel;
+	EboardGUI gui;
 };
 
 #endif
