@@ -43,8 +43,8 @@
 #define MOTOR_BATTERY_VOLTAGE_SAMPLES_COUNT 5
 #define MOTOR_BATTERY_VOLTAGE_WARNING_THRESHOLD (3.4 * 6)
 #define MOTOR_BATTERY_DISCONNECTED_THRESHOLD 2.0 // if battery is disconnected voltage divide is pulled to ground by attached resistor
-#define MOTOR_BATTERY_SWITCH_PORT B //TODO
-#define MOTOR_BATTERY_SWITCH_PIN 1 //TODO
+#define MOTOR_BATTERY_SWITCH_PORT G
+#define MOTOR_BATTERY_SWITCH_PIN 0
 
 #define CU_BATTERY_VOLTAGE_ADC_CHANNEL 1
 #define CU_BATTERY_VOLTAGE_COEFFICIENT ((10 + 40) / 10) // R1=40k, R2=10k
@@ -70,10 +70,10 @@ public:
 		newPacketReceived = false;
 		highestTemperatureIndex = 0;
 		
-		uint8_t motorRGBPins[] = {1,2,3};
-		motorsRGB.init(&PORTA, &DDRA, motorRGBPins);
-		uint8_t temperatureRGBPins[] = {4,5,6};
-		temperatureRGB.init(&PORTA, &DDRA, temperatureRGBPins);
+		uint8_t motorRGBPins[] = {5,4,PIN_UNASSIGNED};
+		motorsRGB.init(&PORTK, &DDRK, motorRGBPins);
+		uint8_t temperatureRGBPins[] = {7,6,PIN_UNASSIGNED};
+		temperatureRGB.init(&PORTK, &DDRK, temperatureRGBPins);
 		odometer.init();
 	}
 	
@@ -82,7 +82,9 @@ public:
 		ADConverter::init();
 		glcd.init();
 		//TODO odometer.init();
-		//TODO set MOSFET pin as output, turn MOSFET off
+		//set MOSFET pin as output, turn MOSFET off
+		DDR(MOTOR_BATTERY_SWITCH_PORT) |= (1<<MOTOR_BATTERY_SWITCH_PIN);
+		turnMotorBatteryMosfetOff();
 	}
 
 	void update()
@@ -143,7 +145,7 @@ public:
 		glcd.addWidget(&infoLabel, 0, 0);
 		motorBatteryVoltage = getMotorBatteryVoltage();
 		if(!isMotorBatteryConnected()) {
-			infoLabel.setText("Motor battery not connected");
+			infoLabel.setText("Mbat not connected:");
 			glcd.redraw();
 			//TODO set diode blinking
 			while(!isMotorBatteryConnected()) {
@@ -192,12 +194,12 @@ public:
 	{
 		if(isMotorBatteryConnected()) {
 			if(isMotorBatteryLow()) {
-				motorsRGB.setBlinking(YELLOW, STATE_CONTROL_BLINK_FAST_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
+				motorsRGB.setBlinking(RED, STATE_CONTROL_BLINK_FAST_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
 			} else {
 				if(isMotorBatterySwitchOn()) {
 					motorsRGB.setSolid(GREEN);
-				} else {
-					motorsRGB.setBlinking(GREEN, STATE_CONTROL_BLINK_SLOW_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
+				//TODO} else {
+					motorsRGB.setBlinking(GREEN, STATE_CONTROL_BLINK_FAST_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
 				}
 			}
 		} else {
@@ -334,7 +336,12 @@ public:
 	
 	void turnMotorBatteryMosfetOn()
 	{
-		//TODO
+		PORT(MOTOR_BATTERY_SWITCH_PORT) |= (1<<MOTOR_BATTERY_SWITCH_PIN);
+	}
+	
+	void turnMotorBatteryMosfetOff()
+	{
+		PORT(MOTOR_BATTERY_SWITCH_PORT) &= ~(1<<MOTOR_BATTERY_SWITCH_PIN);
 	}
 	
 	void turnDUDataOn()

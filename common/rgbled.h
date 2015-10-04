@@ -5,6 +5,7 @@
 
 #define COLORS_COUNT 3
 #define RGBLED_UPDATE_INTERVAL_MS 200
+#define PIN_UNASSIGNED 255
 
 enum {COMMON_ANODE = 0, COMMON_CATHODE};
 enum {RED = 0, GREEN, BLUE, YELLOW};
@@ -23,7 +24,10 @@ public:
 		port = port_;
 		for(int i = 0; i < COLORS_COUNT; i++) {
 			pins[i] = pins_[i];
-			(*ddr_) |= (1<<pins[i]);
+			if(pins[i] != PIN_UNASSIGNED) {
+				(*ddr_) |= (1<<pins[i]);
+				turnLedOff(i);
+			}
 		};
 	}
 	
@@ -35,11 +39,11 @@ public:
 		blinkCounter += RGBLED_UPDATE_INTERVAL_MS;
 		
 		if(blinkCounter >= blinkOnTime) {
-			//turn led off
+			turnLedOff(currentColor);
 		}
 		if(blinkCounter >= blinkPeriodMs) {
 			blinkCounter = 0;
-			//turn led on
+			turnLedOn(currentColor);
 		}
 		
 	}
@@ -49,7 +53,7 @@ public:
 		if(color >= YELLOW) {
 			//TODO turn on multiple LEDs
 			//temp workaround
-			color = BLUE;
+			color = RED;
 		}
 		singleLedOn(color); //leave only desired color on
 		blinking = true;
@@ -64,7 +68,7 @@ public:
 		if(color >= YELLOW) {
 			//TODO turn on multiple LEDs
 			//temp workaround:
-			color = BLUE;
+			color = RED;
 		}
 		singleLedOn(color);
 		blinking = false;
@@ -89,12 +93,18 @@ private:
 	
 	void turnLedOn(uint8_t i)
 	{
-		*port |= pin(pins[i]);
+		if(i == PIN_UNASSIGNED) {
+			return;
+		}
+		*port &= ~pin(pins[i]);
 	}
 	
 	void turnLedOff(uint8_t i)
 	{
-		*port &= ~pin(pins[i]);
+		if(i == PIN_UNASSIGNED) {
+			return;
+		}
+		*port |= pin(pins[i]);
 	}
 
 	volatile uint8_t* port;

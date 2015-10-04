@@ -71,6 +71,7 @@ int main(void)
 	timer.init();
 	timer.start();
 	
+	
 	while(1)
 	{
 		/*while(uart1_available()) {
@@ -85,6 +86,7 @@ int main(void)
 		if(uart_available())
 		{
 			char uartChar = uartGetChar();
+			Debug::println(uartChar);
 			rx.receiveNewChar(uartChar);
 			while(uart_available()) {
 				rx.receiveNewChar(uartGetChar());
