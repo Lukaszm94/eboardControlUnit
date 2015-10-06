@@ -6,17 +6,17 @@
 #include "debug.h"
 
 
-const int inputBufferSize = 60;
+#define inputBufferSize 100
 
-class uartReceiver
+class UartReceiver
 {
 public:
-    uartReceiver() : buff(inputBuffer, inputBufferSize)
+    UartReceiver() : buff(inputBuffer, inputBufferSize)
     {
 
     }
 
-    void receiveNewChar(char newChar)
+    void loadNewChar(char newChar)
     {
         buff.append(newChar);
     }
@@ -31,7 +31,7 @@ public:
         return parser.getPacket();
     }
 	
-	void clear()
+	void clearBuffer()
 	{
 		buff.clear();
 	}

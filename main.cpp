@@ -51,7 +51,7 @@ void clearUartBuffers()
 
 int main(void)
 {
-	uartReceiver rx;
+	UartReceiver rx;
 	Packet receivedPacket;
 	
 	sei();
@@ -64,19 +64,21 @@ int main(void)
 	clearUartBuffers();
 	Debug::println("UART initialized");
 	
+	
 	CU.init();
-	Debug::init();
+	Debug::println("CU init finished");
 	
 	CU.startupSequence();
+	Debug::println("Startup sequence finished");
 	timer.init();
 	timer.start();
 	
 	
 	while(1)
 	{
-		/*while(uart1_available()) {
+		while(uart1_available()) {
 			CU.newGPSChar(uart1GetChar());
-		}*/
+		}
 	
 		if(interruptFlag) {
 			interruptFlag = false;
@@ -86,15 +88,14 @@ int main(void)
 		if(uart_available())
 		{
 			char uartChar = uartGetChar();
-			Debug::println(uartChar);
-			rx.receiveNewChar(uartChar);
+			rx.loadNewChar(uartChar);
 			while(uart_available()) {
-				rx.receiveNewChar(uartGetChar());
+				rx.loadNewChar(uartGetChar());
 			}
 			if(rx.parseBuffer()) {
 				receivedPacket = rx.getPacket();
 				Debug::println("New packet");
-				rx.clear();
+				rx.clearBuffer();
 				CU.onNewPacketReceived(&receivedPacket);
 			}
 		}

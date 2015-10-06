@@ -25,7 +25,7 @@
 #define TEMPERATURE_CRITICAL_THRESHOLD 65
 
 #define THERMOMETERS_COUNT 7 //also defined in sensorsManager.h, including it just for one define is pointless
-#define THERMOMETER_MOSFET_ADC_CHANNEL 0
+#define THERMOMETER_MOSFET_ADC_CHANNEL 2
 #define THERMOMETER_SAMPLES_COUNT 5
 #define THERMOMETER_UNCONNECTED_MIN_VALUE 96 //if thermometer in DU is unconnected its reading is around 98-99C,
 //so we can detect faulty reading (assuming that measured temperature is less than that
@@ -58,13 +58,15 @@
 #define DU_START_SENDING_COMMAND ('b')
 #define DU_STOP_SENDING_COMMAND ('s')
 
+#define DEBUG_NOTIFICATION_INTERVAL 1000
+
 class ControlUnit
 {
 public:
 	ControlUnit()
 	{
 		batteryLoad = 0;
-		batteryLoadUpdateTimer = boardStateUpdateTimer = stateControlsTimer = lcdUpdateTimer = odometerTimer = 0;
+		batteryLoadUpdateTimer = boardStateUpdateTimer = stateControlsTimer = lcdUpdateTimer = odometerTimer = debugTimer = 0;
 		latestPacket = NULL;
 		motorBatteryVoltageOk = cuBatteryVoltageOk = temperaturesOk = true;
 		newPacketReceived = false;
@@ -72,9 +74,8 @@ public:
 		
 		uint8_t motorRGBPins[] = {5,4,PIN_UNASSIGNED};
 		motorsRGB.init(&PORTK, &DDRK, motorRGBPins);
-		uint8_t temperatureRGBPins[] = {7,6,PIN_UNASSIGNED};
+		uint8_t temperatureRGBPins[] = {6,7,PIN_UNASSIGNED};
 		temperatureRGB.init(&PORTK, &DDRK, temperatureRGBPins);
-		odometer.init();
 	}
 	
 	void init()
@@ -94,6 +95,7 @@ public:
 		boardStateUpdateTimer += INTERRUPT_PERIOD_MS;
 		stateControlsTimer += INTERRUPT_PERIOD_MS;
 		odometerTimer += INTERRUPT_PERIOD_MS;
+		debugTimer += INTERRUPT_PERIOD_MS;
 		
 		//analyze packet(if new received), read other sensors, check if parameters are in allowed boundaries
 		if(boardStateUpdateTimer >= BOARD_STATE_UPDATE_PERIOD_MS) {
@@ -124,6 +126,11 @@ public:
 		if(lcdUpdateTimer >= LCD_UPDATE_PERIOD_MS) {
 			lcdUpdateTimer = 0;
 			lcdUpdate();
+		}
+		
+		if(debugTimer >= DEBUG_NOTIFICATION_INTERVAL) {
+			debugTimer = 0;
+			debugUpdate();
 		}
 	}
 	
@@ -349,6 +356,34 @@ public:
 		uart_putc(DU_START_SENDING_COMMAND);
 	}
 	
+	void debugUpdate()
+	{
+		Debug::print("Temp: ");
+		for(int i = 0; i <THERMOMETERS_COUNT; i++) {
+			Debug::print(temperatures[i]);
+			Debug::print(", ");
+		}
+		Debug::endl();
+		Debug::print("Current: ");
+		Debug::print(m1current);
+		Debug::print(", ");
+		Debug::println(m2current);
+		Debug::print("Voltage: CU= ");
+		Debug::print(cuBatteryVoltage);
+		Debug::print(", motors= ");
+		Debug::println(motorBatteryVoltage);
+		if(temperaturesOk) {
+			Debug::println("Temps ok");
+		} else {
+			Debug::println("Temps not ok");
+		}
+		if(motorBatteryVoltageOk) {
+			Debug::println("Motor battery ok");
+		} else {
+			Debug::println("Motor battery not ok");
+		}
+		Debug::println("----------------------");
+	}
 	
 	
 	unsigned long lcdUpdateTimer;
@@ -356,9 +391,10 @@ public:
 	unsigned long boardStateUpdateTimer;
 	unsigned long stateControlsTimer;
 	unsigned long odometerTimer;
+	unsigned long debugTimer;
 	
 	bool newPacketReceived;
-	Packet *latestPacket;
+	Packet* latestPacket;
 	
 	Thermometer mosfetThermometer;
 	

@@ -55,6 +55,11 @@ public:
 			//temp workaround
 			color = RED;
 		}
+		
+		if(currentColor == color && blinkPeriodMs == periodMs) {
+			return;
+		}
+		
 		singleLedOn(color); //leave only desired color on
 		blinking = true;
 		currentColor = color;

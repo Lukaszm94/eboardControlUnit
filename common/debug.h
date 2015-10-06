@@ -36,6 +36,25 @@ public:
         endl();
 		#endif
     }
+
+	//float
+	static inline void print(float number)
+    {
+		#if DEBUG_ON
+		int integer = (int)number;
+		int fractional = (int)(number*10)%10;
+		uart1_putint(integer);
+		uart1_putc('.');
+		uart1_putint(fractional);
+		#endif
+    }
+    static inline void println(float number)
+    {
+		#if DEBUG_ON
+        print(number);
+        endl();
+		#endif
+    }
 	
     //char
     static inline void print(char c)

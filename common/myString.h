@@ -96,13 +96,18 @@ private:
     char *buffer;
     int index;
 
-    void incrementBufferEndPointer()
+    bool incrementBufferEndPointer()
     {
-        index++;
-        if(index > bufferSize - 1) {
-            Debug::print("MyString: buffer overflow!!");;
+        if(index >= bufferSize - 1) {
+            Debug::print("MyString: buffer overflow: buff= ");
+			Debug::print(buffer);
+			Debug::print(", index: ");
+			Debug::print(index);
             Debug::endl();
+			return false;
         }
+		index++;
+		return true;
     }
 
     void updateEndPointer()

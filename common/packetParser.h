@@ -7,6 +7,7 @@
 #include "myString.h"
 #include "debug.h"
 
+#define MAX_PACKET_LENGTH 80
 #define Cstr_terminator '\0'
 
 class PacketParser
@@ -32,9 +33,18 @@ public:
 
     bool parse(MyString *buff)
     {
+		if(buff->size() > MAX_PACKET_LENGTH) {
+			Debug::println("Buffer size too big, clearing it: ");
+			Debug::println(buff->toCstr());
+			buff->clear();
+			return false;
+		}
+	
         if(buff->size() > minPackLength && buff->at(0) != 's') {
             if(!correctInputBuffer(buff)) {
-                Debug::println("ERROR: COULD NOT CORRECT BUFFER!!");
+                Debug::println("ERROR: COULD NOT CORRECT BUFFER, clearing it: ");
+				Debug::println(buff->toCstr());
+				buff->clear();
                 return false;
             }
         }
