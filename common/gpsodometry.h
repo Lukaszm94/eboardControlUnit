@@ -50,10 +50,22 @@ public:
 	{
 		return currentSpeed;
 	}
+	
+	float getSpeedKmph()
+	{
+		return currentSpeed * 3.6;
+	}
+	
 	unsigned long getDistance()
 	{
-		return distanceTravelled;
+		return (unsigned long) distanceTravelled;
 	}
+	
+	float getDistanceKm()
+	{
+		return (distanceTravelled/1000);
+	}
+	
 	void resetDistance()
 	{
 		distanceTravelled = 0;
@@ -67,12 +79,13 @@ public:
 	void updateSpeed()
 	{
 		float nmeaSpeed = nmea.getSpeed(); //in km/h
-		currentSpeed = nmeaSpeed / 3.6;
+		//currentSpeed = nmeaSpeed / 3.6;
+		currentSpeed = nmeaSpeed / 3.6; //temporary 
 	}
 	
 	NMEA nmea;
 	float currentSpeed;
-	unsigned long distanceTravelled;
+	float distanceTravelled;
 };
 
 

@@ -201,11 +201,11 @@ public:
 	{
 		if(isMotorBatteryConnected()) {
 			if(isMotorBatteryLow()) {
-				motorsRGB.setBlinking(RED, STATE_CONTROL_BLINK_FAST_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
+				motorsRGB.setBlinking(YELLOW, STATE_CONTROL_BLINK_FAST_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
 			} else {
 				if(isMotorBatterySwitchOn()) {
 					motorsRGB.setSolid(GREEN);
-				//TODO} else {
+				} else {
 					motorsRGB.setBlinking(GREEN, STATE_CONTROL_BLINK_FAST_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
 				}
 			}
@@ -220,12 +220,13 @@ public:
 		} else {
 			temperatureRGB.setBlinking(RED, STATE_CONTROL_BLINK_FAST_PERIOD, STATE_CONTROL_BLINK_DUTY_CYCLE);
 		}
+		
 	}
 
 	void lcdUpdate()
 	{
-		gui.setSpeed((int)(odometer.getSpeed()+0.5));
-		gui.setDistance(odometer.getDistance());
+		gui.setSpeed((int)(odometer.getSpeedKmph()+0.5));
+		gui.setDistance(odometer.getDistanceKm());
 		gui.setCurrent((int)(getTotalMotorsCurrent() + 0.5));
 		gui.setLoad(batteryLoad);
 		glcd.redraw();

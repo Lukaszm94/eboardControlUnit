@@ -8,7 +8,7 @@
 #define PIN_UNASSIGNED 255
 
 enum {COMMON_ANODE = 0, COMMON_CATHODE};
-enum {RED = 0, GREEN, BLUE, YELLOW};
+enum {RED = 1, GREEN = 2, BLUE = 4, YELLOW};
 
 class RGBLed
 {
@@ -17,6 +17,8 @@ public:
 	{
 		blinkCounter = 0;
 		blinking = false;
+		currentColor = 0;
+		blinkPeriodMs = 0;
 	}
 	
 	void init(volatile uint8_t* port_, volatile uint8_t* ddr_, uint8_t* pins_,  uint8_t ledType = COMMON_ANODE)
@@ -39,43 +41,42 @@ public:
 		blinkCounter += RGBLED_UPDATE_INTERVAL_MS;
 		
 		if(blinkCounter >= blinkOnTime) {
-			turnLedOff(currentColor);
+			setColor(0);
 		}
 		if(blinkCounter >= blinkPeriodMs) {
 			blinkCounter = 0;
-			turnLedOn(currentColor);
+			setColor(currentColor);
 		}
 		
 	}
 	
 	void setBlinking(uint8_t color, uint16_t periodMs, uint8_t dutyCyclePercent)
 	{
-		if(color >= YELLOW) {
-			//TODO turn on multiple LEDs
-			//temp workaround
-			color = RED;
+		if(color == YELLOW) {
+			//turn on multiple LEDs
+			color = RED | GREEN;
 		}
 		
 		if(currentColor == color && blinkPeriodMs == periodMs) {
 			return;
 		}
 		
-		singleLedOn(color); //leave only desired color on
+		setColor(color); //leave only desired colors on
 		blinking = true;
 		currentColor = color;
 		blinkPeriodMs = periodMs;
-		blinkOnTime = (blinkPeriodMs*dutyCyclePercent)/100;
+		blinkOnTime = (((uint32_t)blinkPeriodMs)*dutyCyclePercent)/100;
 		blinkCounter = 0;
 	}
 	
 	void setSolid(uint8_t color)
 	{
-		if(color >= YELLOW) {
+		if(color == YELLOW) {
 			//TODO turn on multiple LEDs
 			//temp workaround:
-			color = RED;
+			color = RED | GREEN;
 		}
-		singleLedOn(color);
+		setColor(color);
 		blinking = false;
 		currentColor = color;
 	}
@@ -85,10 +86,10 @@ private:
 		return ((*port) & pin(pins[currentColor]));
 	}
 	
-	void singleLedOn(uint8_t color)
+	void setColor(uint8_t color)
 	{
 		for(int i = 0; i < COLORS_COUNT; i++) {
-			if(i == color) {
+			if(color & (1<<i)) {
 				turnLedOn(i);
 			} else {
 				turnLedOff(i);

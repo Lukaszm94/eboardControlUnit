@@ -60,7 +60,7 @@ int main(void)
 	uart_init(UART_BAUD_SELECT(9600, F_CPU));
 	//serial for receiving data from GPS and sending debug data to PC
 	DDRD |= (1<<PD3);
-	uart1_init(UART_BAUD_SELECT(57600, F_CPU));
+	uart1_init(UART_BAUD_SELECT(9600, F_CPU));
 	clearUartBuffers();
 	Debug::println("UART initialized");
 	
