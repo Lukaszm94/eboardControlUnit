@@ -21,7 +21,7 @@ public:
 		//TODO add artificial dynamic memory allocation (allocate big tab and give chunks with fake malloc)
 		width = width_;
 		height = height_;
-		int memSize = ((unsigned long) width) * height / 8;
+		int memSize = ((unsigned long) width) * (height / 8);
 		outputBuffer = (char*)malloc(memSize);
 		if(outputBuffer == NULL) {
 			Debug::println("Widget error: could not allocate memory for buffer.");
@@ -37,7 +37,7 @@ public:
 	
 	void clearBuffer()
 	{
-		int buffLen = width * height / 8;
+		int buffLen = width * (height / 8);
 		for(int i = 0; i < buffLen; i++) {
 			outputBuffer[i] = 0;
 		}
@@ -70,8 +70,8 @@ public:
 	inline void setOctet(char octet, uint8_t x, uint8_t y)
 	{
 		uint8_t verticalOcetets = height/8;
-		char index = x*verticalOcetets + y/8;
-		if(index > width*height/8) {
+		uint16_t index = x*verticalOcetets + y/8;
+		if(index > ((uint16_t)width)*(height/8)) {
 			Debug::println("Widget: Set octet: Index out of range");
 			return;
 		}

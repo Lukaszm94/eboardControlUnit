@@ -11,7 +11,8 @@
 
 #include "common/nmea.h"
 #include "common/uart.h"
-#define GPS_ODOMETRY_UPDATE_INTERVAL_MS 100
+#include "common/debug.h"
+#define GPS_ODOMETRY_UPDATE_INTERVAL_MS 200
 
 float fabs(float x)
 {
@@ -26,7 +27,7 @@ class GPSOdometry
 public:
 	GPSOdometry()
 	{
-		currentSpeed = 1;
+		currentSpeed = 0;
 		distanceTravelled = 0;
 	}
 	
@@ -78,9 +79,14 @@ public:
 	
 	void updateSpeed()
 	{
-		float nmeaSpeed = nmea.getSpeed(); //in km/h
-		//currentSpeed = nmeaSpeed / 3.6;
-		currentSpeed = nmeaSpeed / 3.6; //temporary 
+		if(nmea.isdataready()) {
+			float nmeaSpeed = nmea.getSpeed(); //in km/h
+			currentSpeed = nmeaSpeed / 3.6;
+			Debug::print("Speed: ");
+			Debug::println(currentSpeed);
+		} else {
+			Debug::println("No gps data ready");
+		}
 	}
 	
 	NMEA nmea;

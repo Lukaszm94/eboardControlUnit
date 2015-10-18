@@ -45,6 +45,7 @@
 #define MOTOR_BATTERY_DISCONNECTED_THRESHOLD 2.0 // if battery is disconnected voltage divide is pulled to ground by attached resistor
 #define MOTOR_BATTERY_SWITCH_PORT G
 #define MOTOR_BATTERY_SWITCH_PIN 0
+#define MOTOR_BATTERY_LOAD_MAX 9999
 
 #define CU_BATTERY_VOLTAGE_ADC_CHANNEL 1
 #define CU_BATTERY_VOLTAGE_COEFFICIENT ((10 + 40) / 10) // R1=40k, R2=10k
@@ -82,7 +83,6 @@ public:
 	{
 		ADConverter::init();
 		glcd.init();
-		//TODO odometer.init();
 		//set MOSFET pin as output, turn MOSFET off
 		DDR(MOTOR_BATTERY_SWITCH_PORT) |= (1<<MOTOR_BATTERY_SWITCH_PIN);
 		turnMotorBatteryMosfetOff();
@@ -119,7 +119,7 @@ public:
 		
 		if(odometerTimer >= GPS_ODOMETRY_UPDATE_INTERVAL_MS) {
 			odometerTimer = 0;
-			odometer.update();
+			//odometer.update();
 		}
 		
 		//display data on LCD
@@ -239,7 +239,9 @@ public:
 		}
 		float totalCurrent = latestPacket->Ia.toFloat() + latestPacket->Ib.toFloat();
 		batteryLoad += (totalCurrent * BATTERY_LOAD_UPDATE_PERIOD_MS)*MILIAMPEROSECONDS_TO_MILIAMPEROHOURS; //since dt is in ms, we get load in mAs, multimply that by 1/60*60 to get mAh
-		
+		if(batteryLoad >= MOTOR_BATTERY_LOAD_MAX) {
+			batteryLoad = 0;
+		}
 	}
 	
 	void extractDataFromPacket()

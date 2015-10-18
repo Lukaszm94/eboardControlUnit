@@ -3,7 +3,7 @@
 
 #include "uart.h"
 
-#define DEBUG_ON 0
+#define DEBUG_ON 1
 
 class Debug
 {

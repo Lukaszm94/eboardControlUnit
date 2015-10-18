@@ -2,13 +2,13 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include "controlUnit.h"
+#include "common/timer0.h"
 #include "common/uartReceiver.h"
 #include "common/uart.h"
 #include "common/glcd.h"
 #include "common/label.h"
 #include "common/eboardgui.h"
 
-#include "common/Timer1.h"
 #include "common/debug.h"
 
 /*
@@ -48,6 +48,7 @@ void clearUartBuffers()
 	}
 }
 
+unsigned long micros = 0;
 
 int main(void)
 {
@@ -72,19 +73,12 @@ int main(void)
 	Debug::println("Startup sequence finished");
 	timer.init();
 	timer.start();
-	
-	
 	while(1)
 	{
-		while(uart1_available()) {
-			CU.newGPSChar(uart1GetChar());
-		}
-	
 		if(interruptFlag) {
 			interruptFlag = false;
 			CU.update();
 		}
-		
 		if(uart_available())
 		{
 			char uartChar = uartGetChar();
@@ -107,4 +101,5 @@ ISR(TIMER0_COMPA_vect)
 {
 	//PORTC ^= (1<<testLedPin);
 	interruptFlag = true;
+	micros += INTERRUPT_PERIOD_MS;
 }
