@@ -12,6 +12,7 @@
 #include "common/gpsodometry.h"
 #include "common/glcd.h"
 #include "common/eboardgui.h"
+#include "common/led.h"
 
 
 #define BOARD_STATE_UPDATE_PERIOD_MS 200
@@ -420,6 +421,7 @@ public:
 	GPSOdometry odometer;
 	GLCD glcd;
 	EboardGUI gui;
+	volatile LED frontLights;
 };
 
 #endif
