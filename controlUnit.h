@@ -13,6 +13,7 @@
 #include "common/glcd.h"
 #include "common/eboardgui.h"
 #include "common/led.h"
+#include "common/button.h"
 
 
 #define BOARD_STATE_UPDATE_PERIOD_MS 200
@@ -57,10 +58,24 @@
 #define STATE_CONTROL_BLINK_SLOW_PERIOD 1500
 #define STATE_CONTROL_BLINK_DUTY_CYCLE 50
 
+#define FRONT_LIGHTS_SLOW_BLINKING_PERIOD_MS 600
+#define FRONT_LIGHTS_STROBE_PERIOD_MS 300
+#define FRONT_LIGHTS_DDR DDRK
+#define FRONT_LIGHTS_PORT PORTK
+#define FRONT_LIGHTS_PIN 3
+
+#define ENCODER_BUTTON_DDR DDRD
+#define ENCODER_BUTTON_PORT PORTD
+#define ENCODER_BUTTON_PIN_REG PIND
+#define ENCODER_BUTTON_PIN 0
+#define MIN_ENCODER_BUTTON_PRESS_INTERVAL_US 200000UL
+
 #define DU_START_SENDING_COMMAND ('b')
 #define DU_STOP_SENDING_COMMAND ('s')
 
 #define DEBUG_NOTIFICATION_INTERVAL 1000
+
+enum {FRONT_LIGHTS_OFF, FRONT_LIGHTS_LOW_DUTY_BLINKING, FRONT_LIGHTS_HALF_DUTY_BLINKING, FRONT_LIGHTS_SOLID};
 
 class ControlUnit
 {
@@ -68,7 +83,7 @@ public:
 	ControlUnit()
 	{
 		batteryLoad = 0;
-		batteryLoadUpdateTimer = boardStateUpdateTimer = stateControlsTimer = lcdUpdateTimer = odometerTimer = debugTimer = 0;
+		currentTimeUs = batteryLoadUpdateTimer = boardStateUpdateTimer = stateControlsTimer = lcdUpdateTimer = odometerTimer = debugTimer = 0;
 		latestPacket = NULL;
 		motorBatteryVoltageOk = cuBatteryVoltageOk = temperaturesOk = true;
 		newPacketReceived = false;
@@ -78,6 +93,7 @@ public:
 		motorsRGB.init(&PORTK, &DDRK, motorRGBPins);
 		uint8_t temperatureRGBPins[] = {6,7,PIN_UNASSIGNED};
 		temperatureRGB.init(&PORTK, &DDRK, temperatureRGBPins);
+		currentFrontLightsState = FRONT_LIGHTS_OFF;
 	}
 	
 	void init()
@@ -87,10 +103,13 @@ public:
 		//set MOSFET pin as output, turn MOSFET off
 		DDR(MOTOR_BATTERY_SWITCH_PORT) |= (1<<MOTOR_BATTERY_SWITCH_PIN);
 		turnMotorBatteryMosfetOff();
+		frontLights.init(&(FRONT_LIGHTS_PORT), &(FRONT_LIGHTS_DDR), FRONT_LIGHTS_PIN);
+		encoderButton.init(&(ENCODER_BUTTON_PORT), &(ENCODER_BUTTON_DDR), &(ENCODER_BUTTON_PIN_REG), ENCODER_BUTTON_PIN);
 	}
 
 	void update()
 	{
+		currentTimeUs += INTERRUPT_PERIOD_MS;
 		batteryLoadUpdateTimer += INTERRUPT_PERIOD_MS;
 		lcdUpdateTimer += INTERRUPT_PERIOD_MS;
 		boardStateUpdateTimer += INTERRUPT_PERIOD_MS;
@@ -133,6 +152,8 @@ public:
 			debugTimer = 0;
 			debugUpdate();
 		}
+		
+		lightsUpdate();
 	}
 	
 	void onNewPacketReceived(Packet *pack)
@@ -242,6 +263,37 @@ public:
 		batteryLoad += (totalCurrent * BATTERY_LOAD_UPDATE_PERIOD_MS)*MILIAMPEROSECONDS_TO_MILIAMPEROHOURS; //since dt is in ms, we get load in mAs, multimply that by 1/60*60 to get mAh
 		if(batteryLoad >= MOTOR_BATTERY_LOAD_MAX) {
 			batteryLoad = 0;
+		}
+	}
+	
+	void lightsUpdate()
+	{
+		if(encoderButton.isPressed()) {
+			if(currentTimeUs - lastEncoderButtonPressedTime > MIN_ENCODER_BUTTON_PRESS_INTERVAL_US) {
+				incrementFrontLightsState();
+				lastEncoderButtonPressedTime = currentTimeUs;
+			}
+		}
+		frontLights.update();
+	}
+	
+	void incrementFrontLightsState()
+	{
+		if(currentFrontLightsState == FRONT_LIGHTS_OFF) {
+			frontLights.setBlinking(FRONT_LIGHTS_STROBE_PERIOD_MS, 0.2 * FRONT_LIGHTS_STROBE_PERIOD_MS);
+			currentFrontLightsState = FRONT_LIGHTS_LOW_DUTY_BLINKING;
+		} else if(currentFrontLightsState == FRONT_LIGHTS_LOW_DUTY_BLINKING) {
+			frontLights.setBlinking(FRONT_LIGHTS_SLOW_BLINKING_PERIOD_MS, 0.5*FRONT_LIGHTS_SLOW_BLINKING_PERIOD_MS);
+			currentFrontLightsState = FRONT_LIGHTS_HALF_DUTY_BLINKING;
+		} else if(currentFrontLightsState == FRONT_LIGHTS_HALF_DUTY_BLINKING) {
+			frontLights.setSolid(true);
+			currentFrontLightsState = FRONT_LIGHTS_SOLID;
+		} else if(currentFrontLightsState == FRONT_LIGHTS_SOLID) {
+			frontLights.setSolid(false);
+			currentFrontLightsState = FRONT_LIGHTS_OFF;
+		} else {
+			frontLights.setSolid(false);
+			currentFrontLightsState = FRONT_LIGHTS_OFF;
 		}
 	}
 	
@@ -389,13 +441,14 @@ public:
 		Debug::println("----------------------");
 	}
 	
-	
+	unsigned long currentTimeUs;
 	unsigned long lcdUpdateTimer;
 	unsigned long batteryLoadUpdateTimer;
 	unsigned long boardStateUpdateTimer;
 	unsigned long stateControlsTimer;
 	unsigned long odometerTimer;
 	unsigned long debugTimer;
+	unsigned long lastEncoderButtonPressedTime;
 	
 	bool newPacketReceived;
 	Packet* latestPacket;
@@ -421,7 +474,9 @@ public:
 	GPSOdometry odometer;
 	GLCD glcd;
 	EboardGUI gui;
-	volatile LED frontLights;
+	LED frontLights;
+	Button encoderButton;
+	uint8_t currentFrontLightsState;
 };
 
 #endif

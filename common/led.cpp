@@ -26,7 +26,7 @@ void LED::setSolid(bool lit)
 	}
 }
 
-void LED::setBlinking(uint16_t newBlinkPeriodMs, uint16_t newBlinkOnTimeMs) volatile
+void LED::setBlinking(uint16_t newBlinkPeriodMs, uint16_t newBlinkOnTimeMs)
 {
 	timeCounter = 0;
 	blinkPeriod = newBlinkPeriodMs;
@@ -35,7 +35,7 @@ void LED::setBlinking(uint16_t newBlinkPeriodMs, uint16_t newBlinkOnTimeMs) vola
 	blinking = true;
 }
 
-void LED::update() volatile
+void LED::update()
 {
 	if(!blinking) {
 		return;

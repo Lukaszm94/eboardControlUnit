@@ -73,6 +73,8 @@ int main(void)
 	Debug::println("Startup sequence finished");
 	timer.init();
 	timer.start();
+	
+	
 	while(1)
 	{
 		if(interruptFlag) {

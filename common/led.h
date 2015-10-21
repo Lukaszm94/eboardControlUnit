@@ -9,9 +9,9 @@ class LED
 public:
 	LED();
 	void init(volatile uint8_t* port_, volatile uint8_t* ddr_, uint8_t pin_);
-	void setSolid(bool lit) volatile;
-	void setBlinking(uint16_t newBlinkPeriodMs, uint16_t newBlinkOnTimeMs) volatile;
-	void update() volatile; //called from ISR
+	void setSolid(bool lit);
+	void setBlinking(uint16_t newBlinkPeriodMs, uint16_t newBlinkOnTimeMs);
+	void update(); //called from ISR
 	
 private:
 	void turnLEDOff();
